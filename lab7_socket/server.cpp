@@ -119,12 +119,12 @@ int main(int argc, char* argv[]) {
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
         int res = getsockopt(clientSocket, SOL_SOCKET, SO_ERROR, &error,&len);
-        if (res != 0  && error != 0) {
-        std::cout<<"i am here"<<std::endl;
+        if (bytesRead == 0) {
+        //std::cout<<"i am here"<<std::endl;
             break;
         }
 
-        if(bytesRead <= 0){
+        if(bytesRead < 0){
             continue;
         }
 
@@ -138,6 +138,8 @@ int main(int argc, char* argv[]) {
         send(clientSocket, response.c_str(), response.size(), 0);
     }
         close(clientSocket);
+        //std::cout<<"i am here2"<<std::endl;
+
   }
     close(serverSocket);
     return 0;

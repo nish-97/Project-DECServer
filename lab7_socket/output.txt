@@ -1,0 +1,20 @@
+Overall Throughput_1: .639 requests/second
+Average Response Time_1: .564 seconds
+Overall Throughput_2: 1.306 requests/second
+Average Response Time_2: .536 seconds
+Overall Throughput_3: 2.082 requests/second
+Average Response Time_3: .440 seconds
+Overall Throughput_4: 2.780 requests/second
+Average Response Time_4: .437 seconds
+Overall Throughput_5: 3.474 requests/second
+Average Response Time_5: .438 seconds
+Overall Throughput_6: 4.157 requests/second
+Average Response Time_6: .442 seconds
+Overall Throughput_7: 4.865 requests/second
+Average Response Time_7: .437 seconds
+Overall Throughput_8: 5.563 requests/second
+Average Response Time_8: .437 seconds
+Overall Throughput_9: 6.249 requests/second
+Average Response Time_9: .439 seconds
+Overall Throughput_10: 6.935 requests/second
+Average Response Time_10: .441 seconds

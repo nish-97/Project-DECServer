@@ -1,16 +1,16 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
+if [ $# -ne 2 ]; then
     echo "Usage: $0 <numClients> <loopNum> <sleepTimeSeconds>"
     exit 1
 fi
 
 
-#for ((k=1; k<=10; k++));
-#do
-numClients=$1
-loopNum=$2
-sleepTime=$3
+for ((k=1; k<=10; k++));
+do
+numClients=$k
+loopNum=$1
+sleepTime=$2
 loopNumless=`expr $loopNum - 1`
 
 # Create an array to store individual throughputs
@@ -45,7 +45,7 @@ for throughput in "${throughputs[@]}"; do
     overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
 done
 
-echo "Overall Throughput: $overallThroughput requests/second" >> output.txt
+echo "Overall Throughput_$k: $overallThroughput requests/second" >> output.txt
 
 #Calculate average response time
 totalResponseTime=0
@@ -61,5 +61,5 @@ done
     
 averageResponseTime=$(echo "scale=3; $totalResponseTime / $totalResponses" | bc)
 
-echo "Average Response Time: $averageResponseTime seconds" >> output.txt
-#done
+echo "Average Response Time_$k: $averageResponseTime seconds" >> output.txt
+done

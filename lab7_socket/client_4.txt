@@ -1,0 +1,10 @@
+PASS
+Hello World!
+
+Response Time: 0.434109 seconds
+PASS
+Hello World!
+
+Response Time: 0.43304 seconds
+Average Response Time: 0.433574 seconds
+Number of Successful Responses: 2
