@@ -18,9 +18,36 @@ throughputs=()
 
 # Start multiple clients in the background
 for ((i = 1; i <= $numClients; i++)); do
-    ./client 127.0.0.1:5554 received_source.cpp $loopNum $sleepTime > client_$i.txt &
+    file=source.cpp
+    echo $file
+    ./client 127.0.0.1:5555 $file $loopNum $sleepTime > client_$i.txt &
 done
-wait
+#wait
+s_pid=$(pgrep server)
+starttime=$(date +%s)
+echo "Average number of threads : " > nlwp.txt
+echo "Average CPU Utilisation : " > cput.txt
+nlwp=$(ps -T -p $s_pid | wc -l)
+nlwp=`expr $nlwp - 2`
+echo $nlwp >> nlwp.txt
+vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $14}' >> cput.txt
+
+echo $nlwp
+while [[ $nlwp -gt 0 ]];
+do 
+endtime=$(date +%s)
+diff=`expr $endtime - $starttime`
+if [[ $diff -gt 2 ]]; then
+starttime=$(date +%s)
+echo "Average number of threads : " >> nlwp.txt
+echo "Average CPU Utilisation : " >> cput.txt
+nlwp=$(ps -T -p $s_pid | wc -l)
+nlwp=`expr $nlwp - 2`
+echo $nlwp >> nlwp.txt
+vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $14}' >> cput.txt
+fi
+done
+
 
 totalRequests=0
 totalTime=0

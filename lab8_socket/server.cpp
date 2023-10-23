@@ -9,15 +9,18 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-int k = 1;
-pthread_mutex_t lock1;
-pthread_mutex_t lock2;
-std::string CompileAndRun(const std::string& sourceCode) {
+
+
+/*Add .gitignore*/
+
+std::string CompileAndRun(const std::string& sourceCode,int clsocket) {
     std::string response;
     
 
     // Create a temporary source file to store the received source code
-    std::ofstream sourceFile("received_source.cpp");
+    std::string rfilename="received_fd"+std::to_string(clsocket)+".cpp";
+    
+    std::ofstream sourceFile(rfilename);
     if (!sourceFile) {
         response = "COMPILER ERROR\nFailed to create a source file for compilation.";
         return response;
@@ -25,40 +28,44 @@ std::string CompileAndRun(const std::string& sourceCode) {
 
     sourceFile << sourceCode;
     sourceFile.close();
+    std::string compilefile="compile_output"+std::to_string(clsocket)+".txt";
+    std::string outputfile="program_output"+std::to_string(clsocket)+".txt";
+    std::string execfile="executable"+std::to_string(clsocket);
+    std::string expoutput="expected_output"+std::to_string(clsocket)+".txt";
+    std::string diffoutput="diff_output"+std::to_string(clsocket)+".txt";
 
-    pthread_mutex_lock(&lock1);
-    std::string execfile="executable"+std::to_string(k);
-    //std::cout<<"i am here4"<<std::endl;
-    std::string newstring="g++ -o " + execfile + " received_source.cpp > compile_output.txt 2>&1";
-    std::cout<<newstring<<std::endl;
+    std::string copy_cmd="cp expected_output.txt " + expoutput;
+    system(copy_cmd.c_str());
+
+    std::string execstring="g++ -o " + execfile + " " + rfilename + ">" + compilefile +" 2>&1";
+    // std::cout<<execstring<<std::endl;
     // Compile the received source code
     //std::string compileCommand = "g++ -o executable received_source.cpp > compile_output.txt 2>&1";
-    int compileExitCode = system(newstring.c_str());
-    k++;
-    pthread_mutex_unlock(&lock1);
+    int compileExitCode = system(execstring.c_str());
+ 
     if (compileExitCode != 0) {
-        std::ifstream compileOutputFile("compile_output.txt");
+        std::ifstream compileOutputFile(compilefile);
         std::ostringstream compileOutputContent;
         compileOutputContent << compileOutputFile.rdbuf();
         response = "COMPILER ERROR\n" + compileOutputContent.str();
     } else {
         // Execute the compiled program and capture both stdout and stderr
-        std::string execfile1="./"+ execfile + " > program_output.txt 2>&1";
-        int runExitCode = system(execfile1.c_str());
+        std::string runop="./"+ execfile + ">"+ outputfile + " 2>&1";
+        int runExitCode = system(runop.c_str());
 
         if (runExitCode != 0) {
-            std::ifstream runOutputFile("program_output.txt");
+            std::ifstream runOutputFile(outputfile);
             std::ostringstream runOutputContent;
             runOutputContent << runOutputFile.rdbuf();
             response = "RUNTIME ERROR\n" + runOutputContent.str();
         } else {
             // Program executed successfully, compare its output with the expected output
-            std::ifstream programOutputFile("program_output.txt");
+            std::ifstream programOutputFile(outputfile);
             std::ostringstream programOutputContent;
             programOutputContent << programOutputFile.rdbuf();
             std::string programOutput = programOutputContent.str();
 
-            std::ifstream expectedOutputFile("expected_output.txt");
+            std::ifstream expectedOutputFile(expoutput);
             std::ostringstream expectedOutputContent;
             expectedOutputContent << expectedOutputFile.rdbuf();
             std::string expectedOutput = expectedOutputContent.str();
@@ -67,13 +74,13 @@ std::string CompileAndRun(const std::string& sourceCode) {
                 response = "PASS\n" + programOutput;
             } else {
                 // Handle output error
-                std::ofstream programOutputFile("program_output.txt");
+                std::ofstream programOutputFile(outputfile);
                 programOutputFile << programOutput;
                 programOutputFile.close();
+                std:: string diffstring = "diff " + outputfile + " " + expoutput + ">" + diffoutput;
+                system(diffstring.c_str());
 
-                system("diff program_output.txt expected_output.txt > diff_output.txt");
-
-                std::ifstream diffOutputFile("diff_output.txt");
+                std::ifstream diffOutputFile(diffoutput);
                 std::ostringstream diffOutputContent;
                 diffOutputContent << diffOutputFile.rdbuf();
                 response = "OUTPUT ERROR\n" + programOutput + "\n" + diffOutputContent.str();
@@ -85,20 +92,27 @@ std::string CompileAndRun(const std::string& sourceCode) {
 }
 
 void* ClientHandler(void* arg) {
-    int clientSocket = *(int*)arg;
-    //std::cout<<clientSocket<<std::endl;
-    //std::cout<<"i am here"<<std::endl;
-    char buffer[1024];
-    memset(buffer, 0, sizeof(buffer));
-    ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-    std::cout<<buffer<<std::endl;
-    
-    if (bytesRead > 0) {
-        std::string receivedData(buffer);
-        std::string response = CompileAndRun(receivedData);
-        send(clientSocket, response.c_str(), response.size(), 0);
-    }
-    std::cout<<"end"<<clientSocket<<std::endl;
+        int clientSocket=*(int *)arg;
+
+    // while(true){
+            char buffer[1024];
+            memset(buffer, 0, sizeof(buffer));
+            ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+            // if (bytesRead == 0) {
+            // //std::cout<<"i am here"<<std::endl;
+            //     break;
+            // }
+
+            // if(bytesRead <= 0){
+            //     continue;
+            // }
+            if(bytesRead>0){
+            std::string receivedData(buffer);
+            std::string response = CompileAndRun(receivedData,clientSocket);
+            std::cout<<"e"<<clientSocket<<std::endl;
+            send(clientSocket, response.c_str(), response.size(), 0);
+            }
+        // }
     close(clientSocket);
     pthread_exit(NULL);
 }
@@ -134,24 +148,25 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "Server listening on port " << port << std::endl;
-    pthread_mutex_init(&lock1,NULL);
 
     while (true) {    
         int clientSocket = accept(serverSocket, NULL, NULL);
+        std::cout<<"s"<<clientSocket<<std::endl;
         if (clientSocket == -1) {
             perror("Accept error");
             continue;
             }
-        std::cout<<"start"<<clientSocket<<std::endl;
         // Create a new thread to handle the client request
         pthread_t thread;
+        // thread_data *td=(thread_data *)malloc(sizeof(thread_data));
+        // td->ClientSocket=clientSocket;
+        // td->buffer=buffer;
         //std::cout<<"i am here2"<<std::endl;
-        if (pthread_create(&thread, NULL, ClientHandler, &clientSocket) != 0) {
-            std::cout<<"i am here2"<<std::endl;
-            perror("Thread creation error");
-            close(clientSocket);
-        }
-
+            if (pthread_create(&thread, NULL, ClientHandler, &clientSocket) != 0) {
+                std::cout<<"i am here2"<<std::endl;
+                perror("Thread creation error");
+                // close(clientSocket);
+            }
     }
 
     close(serverSocket);

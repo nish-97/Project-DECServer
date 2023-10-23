@@ -8,8 +8,9 @@
 #include <sys/time.h>
 
 int main(int argc, char* argv[]) {
+    //to be edited later to 6
     if (argc != 5) {
-        std::cerr << "Usage: " << argv[0] << " <serverIP:port> <sourceCodeFileTobeGraded> <loopNum> <sleepTimeSeconds>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << "<serverIP:port>  <sourceCodeFileTobeGraded>  <loopNum> <sleepTimeSeconds> <timeout-seconds>" << std::endl;
         return 1;
     }
 
@@ -17,7 +18,7 @@ int main(int argc, char* argv[]) {
     std::string sourceFileName = argv[2];
     int numIterations = std::atoi(argv[3]);
     int sleepTime = std::atoi(argv[4]);
-
+    //int timeout = std::atoi(argv[5]);
     // Extract server IP and port from the command line argument
     size_t COLON = IPPORTSERVER.find(':');
     if (COLON == std::string::npos) {
@@ -31,7 +32,10 @@ int main(int argc, char* argv[]) {
     double totalTime = 0.0;
     int successfulResponses = 0;
 
-       int SocketForClient = socket(AF_INET, SOCK_STREAM, 0);
+       
+
+    for (int i = 0; i < numIterations; ++i){
+        int SocketForClient = socket(AF_INET, SOCK_STREAM, 0);
         if (SocketForClient == -1) {
             perror("ERROR IN Creating SOCKET");
             return 1;
@@ -52,8 +56,6 @@ int main(int argc, char* argv[]) {
             close(SocketForClient);
             return 1;
         }
-
-    for (int i = 0; i < numIterations; ++i){
 
         // Measure the start time
         struct timeval start, end;
@@ -93,15 +95,15 @@ int main(int argc, char* argv[]) {
             successfulResponses++;
             std::cout << "Response Time: " << responseTime << " seconds" << std::endl;
         }
-
-        
+        // Close the socket for this iteration
+        close(SocketForClient);
 
         // Sleep between iterations
         if((i+1) != numIterations)
         sleep(sleepTime);
     }
-    // Close the socket for this iteration
-         close(SocketForClient);
+    
+        
 
    
     std::cout << "Average Response Time: " << (totalTime / successfulResponses) << " seconds" << std::endl;

@@ -19,9 +19,8 @@ throughputs=()
 # Start multiple clients in the background
 for ((i = 1; i <= $numClients; i++)); do
     ./client 127.0.0.1:5555 source_code.cpp $loopNum $sleepTime > client_$i.txt &
-wait
 done
-
+wait
 totalRequests=0
 totalTime=0
 
