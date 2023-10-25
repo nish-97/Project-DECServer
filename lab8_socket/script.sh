@@ -19,8 +19,7 @@ throughputs=()
 # Start multiple clients in the background
 for ((i = 1; i <= $numClients; i++)); do
     file=source.cpp
-    echo $file
-    ./client 127.0.0.1:5555 $file $loopNum $sleepTime > client_$i.txt &
+    ./client 10.130.171.134:5555 $file $loopNum $sleepTime > client_$i.txt &
 done
 #wait
 s_pid=$(pgrep server)
@@ -30,24 +29,32 @@ echo "Average CPU Utilisation : " > cput.txt
 nlwp=$(ps -T -p $s_pid | wc -l)
 nlwp=`expr $nlwp - 2`
 echo $nlwp >> nlwp.txt
-vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $14}' >> cput.txt
+# vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $16}' >> cput.txt
+vmstat 3 >> cput.txt &
+v_pid=$(pgrep vmstat)
 
 echo $nlwp
-while [[ $nlwp -gt 0 ]];
-do 
-endtime=$(date +%s)
-diff=`expr $endtime - $starttime`
-if [[ $diff -gt 2 ]]; then
-starttime=$(date +%s)
-echo "Average number of threads : " >> nlwp.txt
-echo "Average CPU Utilisation : " >> cput.txt
-nlwp=$(ps -T -p $s_pid | wc -l)
-nlwp=`expr $nlwp - 2`
-echo $nlwp >> nlwp.txt
-vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $14}' >> cput.txt
-fi
+less=$(ps aux | grep -i "./client 10.130" | wc -l)
+
+while [[ $less -gt 1 ]];
+    do 
+    endtime=$(date +%s)
+    diff=`expr $endtime - $starttime`
+
+    if [[ $diff -gt 3 ]]; then
+        starttime=$(date +%s)
+        echo "Average number of threads : " >> nlwp.txt
+        echo "Average CPU Utilisation : " >> cput.txt
+        nlwp=$(ps -T -p $s_pid | wc -l)
+        nlwp=`expr $nlwp - 2`
+        echo $nlwp >> nlwp.txt
+        # vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $16}' >> cput.txt
+    fi
+    less=$(ps aux | grep -i "./client 10.130" | wc -l)
 done
 
+kill -9 $v_pid
+echo "$nlwp"
 
 totalRequests=0
 totalTime=0
@@ -89,4 +96,25 @@ done
 averageResponseTime=$(echo "scale=3; $totalResponseTime / $totalResponses" | bc)
 
 echo "Average Response Time: $averageResponseTime seconds" >> output.txt
+
+cput=$(cat cput.txt | sed -E 's/[ ]+/./g' | awk -F. '{print $(NF-2)}' | grep -E "[0-9]+")
+
+avg_cpu_ut=0
+for i in $cput
+    do
+    avg_cpu=`expr 100 - $i`
+    avg_cpu_ut=`expr $avg_cpu_ut + $avg_cpu`
+    it=`expr $it + 1`
+done
+avg_cpu_ut=$(echo "$avg_cpu_ut / $it" | bc)
+
+echo "CPU Utilisation : $avg_cpu_ut"
+
+
+rm program_*
+rm received_*
+rm compile_*
+rm executable*
+rm exp_output*
+
 #done

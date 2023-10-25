@@ -8,6 +8,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <thread>
+#include <sys/types.h>
+#include <vector>
+
+using namespace std;
 
 
 
@@ -31,7 +36,7 @@ std::string CompileAndRun(const std::string& sourceCode,int clsocket) {
     std::string compilefile="compile_output"+std::to_string(clsocket)+".txt";
     std::string outputfile="program_output"+std::to_string(clsocket)+".txt";
     std::string execfile="executable"+std::to_string(clsocket);
-    std::string expoutput="expected_output"+std::to_string(clsocket)+".txt";
+    std::string expoutput="exp_output"+std::to_string(clsocket)+".txt";
     std::string diffoutput="diff_output"+std::to_string(clsocket)+".txt";
 
     std::string copy_cmd="cp expected_output.txt " + expoutput;
@@ -94,25 +99,19 @@ std::string CompileAndRun(const std::string& sourceCode,int clsocket) {
 void* ClientHandler(void* arg) {
         int clientSocket=*(int *)arg;
 
-    // while(true){
+            pid_t tid = gettid();
             char buffer[1024];
             memset(buffer, 0, sizeof(buffer));
+            std::cout<<"rs"<<clientSocket<<" "<<tid<<std::endl;
             ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-            // if (bytesRead == 0) {
-            // //std::cout<<"i am here"<<std::endl;
-            //     break;
-            // }
-
-            // if(bytesRead <= 0){
-            //     continue;
-            // }
+          
+            std::cout<<"re"<<clientSocket<<" "<<tid<<std::endl;
             if(bytesRead>0){
             std::string receivedData(buffer);
             std::string response = CompileAndRun(receivedData,clientSocket);
-            std::cout<<"e"<<clientSocket<<std::endl;
+            
             send(clientSocket, response.c_str(), response.size(), 0);
             }
-        // }
     close(clientSocket);
     pthread_exit(NULL);
 }
@@ -141,7 +140,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (listen(serverSocket, 10) == -1) {
+    if (listen(serverSocket, 20) == -1) {
         perror("Listen error");
         close(serverSocket);
         return 1;
@@ -149,24 +148,25 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Server listening on port " << port << std::endl;
 
+    int clients[100];
+    int counter=0;
+
     while (true) {    
         int clientSocket = accept(serverSocket, NULL, NULL);
-        std::cout<<"s"<<clientSocket<<std::endl;
         if (clientSocket == -1) {
             perror("Accept error");
             continue;
             }
         // Create a new thread to handle the client request
         pthread_t thread;
-        // thread_data *td=(thread_data *)malloc(sizeof(thread_data));
-        // td->ClientSocket=clientSocket;
-        // td->buffer=buffer;
-        //std::cout<<"i am here2"<<std::endl;
-            if (pthread_create(&thread, NULL, ClientHandler, &clientSocket) != 0) {
+        std::cout<<"threadcreate"<<clientSocket<<std::endl;
+            clients[counter]=clientSocket;
+
+            if (pthread_create(&thread, NULL, ClientHandler, &clients[counter]) != 0) {
                 std::cout<<"i am here2"<<std::endl;
                 perror("Thread creation error");
-                // close(clientSocket);
             }
+            counter++;
     }
 
     close(serverSocket);

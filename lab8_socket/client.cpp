@@ -77,9 +77,10 @@ int main(int argc, char* argv[]) {
         send(SocketForClient, request.c_str(), request.size(), 0);
 
         // Receive and display the server response
+        
         char buffer[1024];
         ssize_t bytesRead = recv(SocketForClient, buffer, sizeof(buffer), 0);
-
+        std::cout<<"i am blocked here"<<std::endl;
         // Measure the end time
         gettimeofday(&end, NULL);
 
