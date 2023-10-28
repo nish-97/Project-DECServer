@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
 
     double totalTime = 0.0;
     int successfulResponses = 0;
-    int totNo = 0;
-       
+    int timeoutNumber = 0;
+    int errorNumber = 0;
 
     for (int i = 0; i < numIterations; ++i){
         int SocketForClient = socket(AF_INET, SOCK_STREAM, 0);
@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (connect(SocketForClient, (struct sockaddr*)&AdrrForServer, sizeof(AdrrForServer)) == -1) {
+            errorNumber++;
             perror("Connection error");
             close(SocketForClient);
             return 1;
@@ -80,6 +81,7 @@ int main(int argc, char* argv[]) {
         
         char buffer[1024];
         timeout.tv_sec = timeoutTime;
+        timeout.tv_usec = 0;
         if (setsockopt(SocketForClient,SOL_SOCKET,SO_RCVTIMEO,(struct timeval *)&timeout,sizeof(struct timeval)) < 0){
             std::cerr << "Timeout has occured"<<std::endl;
         }
@@ -90,11 +92,12 @@ int main(int argc, char* argv[]) {
         gettimeofday(&end, NULL);
 
         if (bytesRead <= 0) {
-            std::cerr << "Error in Receiving" << std::endl;
+            
             if(errno == EAGAIN || errno == EWOULDBLOCK){
-                totNo++; 
-                std::cout<< "Timeout Occured";
+                timeoutNumber++; 
+                std::cout<< "Timeout Occured"<<std::endl;
             }
+            std::cerr << "Error in Receiving" << std::endl;
         } else {
             buffer[bytesRead] = '\0';
             std::cout << buffer << std::endl;
@@ -118,6 +121,8 @@ int main(int argc, char* argv[]) {
    
     std::cout << "Average Response Time: " << (totalTime / successfulResponses) << " seconds" << std::endl;
     std::cout << "Number of Successful Responses: " << successfulResponses << std::endl;
+    std::cout << "Number of Timeouts: " << timeoutNumber << std::endl;
+    std::cout << "Number of Errors: " << errorNumber << std::endl;
 
     return 0;
 }

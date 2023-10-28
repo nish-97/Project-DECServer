@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
-    echo "Usage: $0 <numClients> <loopNum> <sleepTimeSeconds>"
+if [ $# -ne 4 ]; then
+    echo "Usage: $0 <numClients> <loopNum> <sleepTimeSeconds> <timeOutSeconds"
     exit 1
 fi
 
@@ -11,6 +11,7 @@ fi
 numClients=$1
 loopNum=$2
 sleepTime=$3
+timeout=$4
 loopNumless=`expr $loopNum - 1`
 
 # Create an array to store individual throughputs
@@ -19,9 +20,10 @@ throughputs=()
 # Start multiple clients in the background
 for ((i = 1; i <= $numClients; i++)); do
     file=source.cpp
-    ./client 10.130.171.134:5555 $file $loopNum $sleepTime > client_$i.txt &
+    ./client 127.0.0.1:5555 $file $loopNum $sleepTime $timeout > client_$i.txt &
 done
 #wait
+
 s_pid=$(pgrep server)
 starttime=$(date +%s)
 echo "Average number of threads : " > nlwp.txt
@@ -34,7 +36,7 @@ vmstat 3 >> cput.txt &
 v_pid=$(pgrep vmstat)
 
 echo $nlwp
-less=$(ps aux | grep -i "./client 10.130" | wc -l)
+less=$(ps aux | grep -i "./client 127.0" | wc -l)
 
 while [[ $less -gt 1 ]];
     do 
@@ -50,7 +52,7 @@ while [[ $less -gt 1 ]];
         echo $nlwp >> nlwp.txt
         # vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $16}' >> cput.txt
     fi
-    less=$(ps aux | grep -i "./client 10.130" | wc -l)
+    less=$(ps aux | grep -i "./client 127.0" | wc -l)
 done
 
 kill -9 $v_pid
@@ -58,14 +60,22 @@ echo "$nlwp"
 
 totalRequests=0
 totalTime=0
-
+totalTimeouts=0
+totalErrors=0
+overallErrorRate=0
+overallTimeoutRate=0
 # Calculate total requests and total time
 for ((i = 1; i <= $numClients; i++)); do
     # Parse client log file to extract total requests and total time
     requests_i=$(grep "Number of Successful Responses" client_$i.txt | awk '{print $5}')
     time_i=$(grep "Average Response Time" client_$i.txt | awk '{print $4}')
+    timeout_i=$(grep "Number of Timeouts" client_$i.txt | awk '{print $4}')
+    error_i=$(grep "Number of Errors:" client_$i.txt | awk '{print $4}')
+
     # Accumulate values for all clients
     totalRequests=`expr $totalRequests + $requests_i`
+    totalTimeouts=`expr $totalTimeouts + $timeout_i`
+    totalErrors=`expr $totalErrors + $error_i`
     totalTime=$(echo "scale=3; $totalTime + $time_i" | bc)
     
     # Calculate throughput for client i
@@ -73,13 +83,22 @@ for ((i = 1; i <= $numClients; i++)); do
     throughputs+=($throughput_i)
 done
 
+overallTimeoutRate=$(echo "scale=3; ($totalTimeouts * 100) / ($numClients * $loopNum)" | bc)
+overallErrorRate=$(echo "scale=3; ($totalErrors * 100)/ ($numClients * $loopNum)" | bc)
+echo "$OverallTimeoutRate  $OverallErrorRate"
+echo "Overall Timeout Rate_$numClients: $overallTimeoutRate %" >> output.txt
+echo "Overall Error Rate_$numClients: $overallErrorRate %" >> output.txt
+
+
 #Calculate overall throughput as the sum of individual throughputs
 overallThroughput=0
+
 for throughput in "${throughputs[@]}"; do
     overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
 done
-
 echo "Overall Throughput_$numClients: $overallThroughput requests/second" >> output.txt
+
+
 
 #Calculate average response time
 totalResponseTime=0
@@ -118,8 +137,10 @@ for i in $lwp
 done
 avg_nlwp=$(echo "scale=3; $avg_nlwp / $it" | bc)
 
-echo "Average CPU Utilisation : $avg_cpu_ut" >> cput.txt
-echo "Average no of Threads : $avg_nlwp" >> nlwp.txt
+echo "Average CPU Utilisation_$numClients : $avg_cpu_ut %" >> output.txt
+echo "Average no of Threads_$numClients : $avg_nlwp Threads" >> output.txt
+
+echo
 
 rm program_*
 rm received_*
@@ -127,6 +148,6 @@ rm compile_*
 rm executable*
 rm exp_output*
 rm client_*
-#rm diff_*
+# rm diff_*
 
 #done
