@@ -9,7 +9,7 @@
 
 int main(int argc, char* argv[]) {
     //to be edited later to 6
-    if (argc != 5) {
+    if (argc != 6) {
         std::cerr << "Usage: " << argv[0] << "<serverIP:port>  <sourceCodeFileTobeGraded>  <loopNum> <sleepTimeSeconds> <timeout-seconds>" << std::endl;
         return 1;
     }
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     std::string sourceFileName = argv[2];
     int numIterations = std::atoi(argv[3]);
     int sleepTime = std::atoi(argv[4]);
-    //int timeout = std::atoi(argv[5]);
+    int timeoutTime = std::atoi(argv[5]);
     // Extract server IP and port from the command line argument
     size_t COLON = IPPORTSERVER.find(':');
     if (COLON == std::string::npos) {
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 
     double totalTime = 0.0;
     int successfulResponses = 0;
-
+    int totNo = 0;
        
 
     for (int i = 0; i < numIterations; ++i){
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Measure the start time
-        struct timeval start, end;
+        struct timeval start, end, timeout;
         gettimeofday(&start, NULL);
 
         // Read the content of the source code file
@@ -79,13 +79,22 @@ int main(int argc, char* argv[]) {
         // Receive and display the server response
         
         char buffer[1024];
+        timeout.tv_sec = timeoutTime;
+        if (setsockopt(SocketForClient,SOL_SOCKET,SO_RCVTIMEO,(struct timeval *)&timeout,sizeof(struct timeval)) < 0){
+            std::cerr << "Timeout has occured"<<std::endl;
+        }
+        
         ssize_t bytesRead = recv(SocketForClient, buffer, sizeof(buffer), 0);
-        std::cout<<"i am blocked here"<<std::endl;
+        
         // Measure the end time
         gettimeofday(&end, NULL);
 
         if (bytesRead <= 0) {
             std::cerr << "Error in Receiving" << std::endl;
+            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                totNo++; 
+                std::cout<< "Timeout Occured";
+            }
         } else {
             buffer[bytesRead] = '\0';
             std::cout << buffer << std::endl;

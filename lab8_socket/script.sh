@@ -79,7 +79,7 @@ for throughput in "${throughputs[@]}"; do
     overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
 done
 
-echo "Overall Throughput: $overallThroughput requests/second" >> output.txt
+echo "Overall Throughput_$numClients: $overallThroughput requests/second" >> output.txt
 
 #Calculate average response time
 totalResponseTime=0
@@ -95,26 +95,38 @@ done
     
 averageResponseTime=$(echo "scale=3; $totalResponseTime / $totalResponses" | bc)
 
-echo "Average Response Time: $averageResponseTime seconds" >> output.txt
+echo "Average Response Time_$numClients: $averageResponseTime seconds" >> output.txt
 
 cput=$(cat cput.txt | sed -E 's/[ ]+/./g' | awk -F. '{print $(NF-2)}' | grep -E "[0-9]+")
-
+lwp=$(cat nlwp.txt | grep -E "[0-9]+")
 avg_cpu_ut=0
+avg_nlwp=0
+it=0
 for i in $cput
     do
     avg_cpu=`expr 100 - $i`
     avg_cpu_ut=`expr $avg_cpu_ut + $avg_cpu`
     it=`expr $it + 1`
 done
-avg_cpu_ut=$(echo "$avg_cpu_ut / $it" | bc)
+avg_cpu_ut=$(echo "scale=3; $avg_cpu_ut / $it" | bc)
 
-echo "CPU Utilisation : $avg_cpu_ut"
+it=0
+for i in $lwp
+    do
+    avg_nlwp=`expr $i + $avg_nlwp`
+    it=`expr $it + 1`
+done
+avg_nlwp=$(echo "scale=3; $avg_nlwp / $it" | bc)
 
+echo "Average CPU Utilisation : $avg_cpu_ut" >> cput.txt
+echo "Average no of Threads : $avg_nlwp" >> nlwp.txt
 
 rm program_*
 rm received_*
 rm compile_*
 rm executable*
 rm exp_output*
+rm client_*
+#rm diff_*
 
 #done
