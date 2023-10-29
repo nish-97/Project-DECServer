@@ -32,7 +32,7 @@ nlwp=$(ps -T -p $s_pid | wc -l)
 nlwp=`expr $nlwp - 2`
 echo $nlwp >> nlwp.txt
 # vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $16}' >> cput.txt
-vmstat 3 >> cput.txt &
+vmstat 2 >> cput.txt &
 v_pid=$(pgrep vmstat)
 
 echo $nlwp
@@ -43,7 +43,7 @@ while [[ $less -gt 1 ]];
     endtime=$(date +%s)
     diff=`expr $endtime - $starttime`
 
-    if [[ $diff -gt 3 ]]; then
+    if [[ $diff -gt 2 ]]; then
         starttime=$(date +%s)
         echo "Average number of threads : " >> nlwp.txt
         echo "Average CPU Utilisation : " >> cput.txt
@@ -60,22 +60,25 @@ echo "$nlwp"
 
 totalRequests=0
 totalTime=0
-totalTimeouts=0
-totalErrors=0
-overallErrorRate=0
-overallTimeoutRate=0
+totalTimeoutRate=0.0
+totalErrorRate=0.0
+
+# overallErrorRate=0
+# overallTimeoutRate=0
 # Calculate total requests and total time
 for ((i = 1; i <= $numClients; i++)); do
     # Parse client log file to extract total requests and total time
     requests_i=$(grep "Number of Successful Responses" client_$i.txt | awk '{print $5}')
     time_i=$(grep "Average Response Time" client_$i.txt | awk '{print $4}')
-    timeout_i=$(grep "Number of Timeouts" client_$i.txt | awk '{print $4}')
-    error_i=$(grep "Number of Errors:" client_$i.txt | awk '{print $4}')
-
+    # timeout_i=$(grep "Number of Timeouts" client_$i.txt | awk '{print $4}')
+    # error_i=$(grep "Number of Errors:" client_$i.txt | awk '{print $4}')
+    timeoutrate_i=$(grep "Average Timeout Rate" client_$i.txt | awk '{print $4}')
+    errorrate_i=$(grep "Average Error Rate:" client_$i.txt | awk '{print $4}')
+    
     # Accumulate values for all clients
     totalRequests=`expr $totalRequests + $requests_i`
-    totalTimeouts=`expr $totalTimeouts + $timeout_i`
-    totalErrors=`expr $totalErrors + $error_i`
+    totalTimeoutRate=$(echo "scale=3; $totalTimeoutRate + $timeoutrate_i" | bc)
+    totalErrorRate=$(echo "scale=3; $totalErrorRate + $errorrate_i" | bc)
     totalTime=$(echo "scale=3; $totalTime + $time_i" | bc)
     
     # Calculate throughput for client i
@@ -83,11 +86,11 @@ for ((i = 1; i <= $numClients; i++)); do
     throughputs+=($throughput_i)
 done
 
-overallTimeoutRate=$(echo "scale=3; ($totalTimeouts * 100) / ($numClients * $loopNum)" | bc)
-overallErrorRate=$(echo "scale=3; ($totalErrors * 100)/ ($numClients * $loopNum)" | bc)
-echo "$OverallTimeoutRate  $OverallErrorRate"
-echo "Overall Timeout Rate_$numClients: $overallTimeoutRate %" >> output.txt
-echo "Overall Error Rate_$numClients: $overallErrorRate %" >> output.txt
+# overallTimeoutRate=$(echo "scale=3; ($totalTimeouts * 100) / ($numClients * $loopNum)" | bc)
+# overallErrorRate=$(echo "scale=3; ($totalErrors * 100)/ ($numClients * $loopNum)" | bc)
+# echo "$totalTimeoutRate  $totalErrorRate" | bc
+echo "Overall Timeout Rate_$numClients: $totalTimeoutRate timeouts/second" >> output.txt
+echo "Overall Error Rate_$numClients: $totalErrorRate errors/second" >> output.txt
 
 
 #Calculate overall throughput as the sum of individual throughputs
@@ -97,6 +100,8 @@ for throughput in "${throughputs[@]}"; do
     overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
 done
 echo "Overall Throughput_$numClients: $overallThroughput requests/second" >> output.txt
+requestSentRate=$(echo "scale=3; $totalTimeoutRate + $totalErrorRate + $overallThroughput" | bc)
+echo "Request Sent Rate_$numClients: $requestSentRate requests/second" >> output.txt
 
 
 
@@ -140,14 +145,13 @@ avg_nlwp=$(echo "scale=3; $avg_nlwp / $it" | bc)
 echo "Average CPU Utilisation_$numClients : $avg_cpu_ut %" >> output.txt
 echo "Average no of Threads_$numClients : $avg_nlwp Threads" >> output.txt
 
-echo
-
+echo "" >> output.txt
 rm program_*
 rm received_*
 rm compile_*
 rm executable*
 rm exp_output*
-rm client_*
+# rm client_*
 # rm diff_*
 
 #done

@@ -33,6 +33,9 @@ int main(int argc, char* argv[]) {
     int successfulResponses = 0;
     int timeoutNumber = 0;
     int errorNumber = 0;
+    struct timeval start_cl,end_cl;
+    double totalTime_cl=0.0;
+    gettimeofday(&start_cl,NULL);
 
     for (int i = 0; i < numIterations; ++i){
         int SocketForClient = socket(AF_INET, SOCK_STREAM, 0);
@@ -58,9 +61,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        // Measure the start time
-        struct timeval start, end, timeout;
-        gettimeofday(&start, NULL);
+        
 
         // Read the content of the source code file
         std::ifstream sourceFile(sourceFileName);
@@ -72,6 +73,12 @@ int main(int argc, char* argv[]) {
 
         std::string sourceCodeContent((std::istreambuf_iterator<char>(sourceFile)),
                                        std::istreambuf_iterator<char>());
+
+
+        // Measure the start time
+        struct timeval start, end, timeout;
+        gettimeofday(&start, NULL);
+
 
         // Send the request and source code content to the server
         std::string request = sourceCodeContent;
@@ -95,7 +102,8 @@ int main(int argc, char* argv[]) {
             
             if(errno == EAGAIN || errno == EWOULDBLOCK){
                 timeoutNumber++; 
-                std::cout<< "Timeout Occured"<<std::endl;
+                double responseTime = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
+                std::cout<< "Timeout Occured: \n"<< responseTime <<std::endl;
             }
             std::cerr << "Error in Receiving" << std::endl;
         } else {
@@ -115,14 +123,28 @@ int main(int argc, char* argv[]) {
         if((i+1) != numIterations)
         sleep(sleepTime);
     }
-    
-        
 
-   
-    std::cout << "Average Response Time: " << (totalTime / successfulResponses) << " seconds" << std::endl;
+    gettimeofday(&end_cl,NULL);
+    totalTime_cl=(end_cl.tv_sec - start_cl.tv_sec) + (end_cl.tv_usec - start_cl.tv_usec) / 1000000.0;
+    std::cout << "\n" << std::endl;
     std::cout << "Number of Successful Responses: " << successfulResponses << std::endl;
     std::cout << "Number of Timeouts: " << timeoutNumber << std::endl;
     std::cout << "Number of Errors: " << errorNumber << std::endl;
+    if(successfulResponses != 0)
+        std::cout << "Average Response Time: " << (totalTime / successfulResponses) << " seconds" << std::endl;
+    else 
+        std::cout << "Average Response Time: 0 seconds" << std::endl;
+    
+    if(timeoutNumber != 0)
+        std::cout << "Average Timeout Rate: " << (timeoutNumber / totalTime_cl) << " timeouts/seconds" << std::endl;
+    else
+        std::cout << "Average Timeout Rate: 0 timeouts/seconds" << std::endl;
+
+    
+    if(errorNumber != 0)
+        std::cout << "Average Error Rate: " << (errorNumber / totalTime_cl) << " errors/seconds" << std::endl;
+    else
+        std::cout << "Average Error Rate: 0 errors/seconds" << std::endl;
 
     return 0;
 }
