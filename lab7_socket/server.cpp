@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (listen(serverSocket, 2) == -1) {
+    if (listen(serverSocket, SOMAXCONN) == -1) {
         perror("Listen error");
         close(serverSocket);
         return 1;

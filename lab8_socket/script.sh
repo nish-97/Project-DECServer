@@ -99,9 +99,9 @@ overallThroughput=0
 for throughput in "${throughputs[@]}"; do
     overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
 done
-echo "Overall Throughput_$numClients: $overallThroughput requests/second" >> output.txt
+echo "Overall Goodput_$numClients: $overallThroughput requests/second" >> output.txt
 requestSentRate=$(echo "scale=3; $totalTimeoutRate + $totalErrorRate + $overallThroughput" | bc)
-echo "Request Sent Rate_$numClients: $requestSentRate requests/second" >> output.txt
+echo "Request Sent Rate(Th)_$numClients: $requestSentRate requests/second" >> output.txt
 
 
 
@@ -151,7 +151,7 @@ rm received_*
 rm compile_*
 rm executable*
 rm exp_output*
-# rm client_*
+rm client_*
 # rm diff_*
 
 #done
