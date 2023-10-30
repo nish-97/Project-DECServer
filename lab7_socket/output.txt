@@ -1,20 +1,29 @@
-Overall Throughput_1: .647 requests/second
-Average Response Time_1: .544 seconds
-Overall Throughput_2: .956 requests/second
-Average Response Time_2: 1.332 seconds
-Overall Throughput_3: 1.178 requests/second
-Average Response Time_3: 2.074 seconds
-Overall Throughput_4: 1.374 requests/second
-Average Response Time_4: 2.784 seconds
-Overall Throughput_5: 1.606 requests/second
-Average Response Time_5: 2.861 seconds
-Overall Throughput_6: 1.669 requests/second
-Average Response Time_6: 3.815 seconds
-Overall Throughput_7: 1.934 requests/second
-Average Response Time_7: 3.551 seconds
-Overall Throughput_8: 1.879 requests/second
-Average Response Time_8: 5.049 seconds
-Overall Throughput_9: 2.134 requests/second
-Average Response Time_9: 4.819 seconds
-Overall Throughput_10: 2.498 requests/second
-Average Response Time_10: 4.672 seconds
+Overall Throughput_1: .646 requests/second
+Average Response Time_1: .546 seconds
+Overall Throughput_2: .962 requests/second
+Average Response Time_2: 1.358 seconds
+Overall Throughput_3: 1.123 requests/second
+Average Response Time_3: 2.189 seconds
+Overall Throughput_4: 1.362 requests/second
+Average Response Time_4: 2.806 seconds
+Overall Throughput_5: 1.557 requests/second
+Average Response Time_5: 3.185 seconds
+Overall Throughput_6: 1.735 requests/second
+Average Response Time_6: 3.424 seconds
+Overall Throughput_7: 1.881 requests/second
+Average Response Time_7: 3.773 seconds
+Overall Throughput_8: 2.119 requests/second
+Average Response Time_8: 3.687 seconds
+Overall Throughput_9: 2.188 requests/second
+Average Response Time_9: 4.450 seconds
+Overall Throughput_10: 2.225 requests/second
+Average Response Time_10: 5.342 seconds
+Overall Throughput_11: 2.142 requests/second
+Average Response Time_11: 7.798 seconds
+Overall Throughput_12: 2.368 requests/second
+Average Response Time_12: 6.409 seconds
+Overall Throughput_13: 2.091 requests/second
+Average Response Time_13: 12.214 seconds
+Overall Throughput_14: 2.304 requests/second
+Average Response Time_14: 10.358 seconds
+
