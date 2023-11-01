@@ -62,7 +62,7 @@ totalRequests=0
 totalTime=0
 totalTimeoutRate=0.0
 totalErrorRate=0.0
-goodPut=0.0
+
 # overallErrorRate=0
 # overallTimeoutRate=0
 # Calculate total requests and total time
@@ -82,10 +82,8 @@ for ((i = 1; i <= $numClients; i++)); do
     totalTime=$(echo "scale=3; $totalTime + $time_i" | bc)
     
     # Calculate throughput for client i
-    # throughput_i=$(echo "scale=3; $requests_i / (($requests_i * $time_i) + ($sleepTime * $loopNumless))" | bc)
-    # throughputs+=($throughput_i)
-    goodPut_i=$(grep "Goodput:" client_$i.txt | awk '{print $2}')
-    goodPut=`expr $goodput + $goodPut_i
+    throughput_i=$(echo "scale=3; $requests_i / (($requests_i * $time_i) + ($sleepTime * $loopNumless))" | bc)
+    throughputs+=($throughput_i)
 done
 
 # overallTimeoutRate=$(echo "scale=3; ($totalTimeouts * 100) / ($numClients * $loopNum)" | bc)
@@ -96,15 +94,14 @@ echo "Overall Error Rate_$numClients: $totalErrorRate errors/second" >> output.t
 
 
 #Calculate overall throughput as the sum of individual throughputs
-# overallThroughput=0
+overallThroughput=0
 
-# for throughput in "${throughputs[@]}"; do
-#     overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
-# done
-# echo "Overall Goodput_$numClients: $overallThroughput requests/second" >> output.txt
-echo "Overall Goodput_$numClients: $goodPut requests/second" >> output.txt
-requestSentRate=$(echo "scale=3; $totalTimeoutRate + $totalErrorRate + $goodPut" | bc)
-echo "Request Sent Rate(Th)_$numClients: $requestSentRate requests/second" >> output.txt
+for throughput in "${throughputs[@]}"; do
+    overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
+done
+echo "Overall Throughput_$numClients: $overallThroughput requests/second" >> output.txt
+requestSentRate=$(echo "scale=3; $totalTimeoutRate + $totalErrorRate + $overallThroughput" | bc)
+echo "Request Sent Rate_$numClients: $requestSentRate requests/second" >> output.txt
 
 
 
@@ -154,7 +151,7 @@ rm received_*
 rm compile_*
 rm executable*
 rm exp_output*
-rm client_*
+# rm client_*
 # rm diff_*
 
 #done

@@ -133,20 +133,18 @@ int main(int argc, char* argv[]) {
     if(successfulResponses != 0)
         std::cout << "Average Response Time: " << (totalTime / successfulResponses) << " seconds" << std::endl;
     else 
-        std::cout << "Average Response Time: 0 second" << std::endl;
+        std::cout << "Average Response Time: 0 seconds" << std::endl;
     
     if(timeoutNumber != 0)
-        std::cout << "Average Timeout Rate: " << (timeoutNumber / totalTime_cl) << " timeouts/second" << std::endl;
+        std::cout << "Average Timeout Rate: " << (timeoutNumber / totalTime_cl) << " timeouts/seconds" << std::endl;
     else
-        std::cout << "Average Timeout Rate: 0 timeouts/second" << std::endl;
-
-        std::cout << "Goodput: " << (successfulResponses / totalTime_cl) << " requests/second" << std::endl;
+        std::cout << "Average Timeout Rate: 0 timeouts/seconds" << std::endl;
 
     
     if(errorNumber != 0)
-        std::cout << "Average Error Rate: " << (errorNumber / totalTime_cl) << " errors/second" << std::endl;
+        std::cout << "Average Error Rate: " << (errorNumber / totalTime_cl) << " errors/seconds" << std::endl;
     else
-        std::cout << "Average Error Rate: 0 errors/second" << std::endl;
+        std::cout << "Average Error Rate: 0 errors/seconds" << std::endl;
 
     return 0;
 }
