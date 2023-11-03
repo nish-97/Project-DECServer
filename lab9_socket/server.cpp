@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
     for(int i=0;i<noThreads;i++)
     {
         poolReady[i] = 0;
-        int rc = pthread_create(&threads[i], NULL, ClientHandler, (void *)i);
+        int rc = pthread_create(&threads[i], NULL, ClientHandler, (void *)&i);
         assert(rc == 0);
     }
     
