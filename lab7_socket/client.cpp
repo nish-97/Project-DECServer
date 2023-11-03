@@ -17,7 +17,8 @@ int main(int argc, char* argv[]) {
     std::string sourceFileName = argv[2];
     int numIterations = std::atoi(argv[3]);
     int sleepTime = std::atoi(argv[4]);
-
+    struct timeval start_cl,end_cl;
+    double totalTime_cl=0.0;
     // Extract server IP and port from the command line argument
     size_t COLON = IPPORTSERVER.find(':');
     if (COLON == std::string::npos) {
@@ -53,11 +54,11 @@ int main(int argc, char* argv[]) {
             close(SocketForClient);
             return 1;
         }
-    for (int i = 0; i < numIterations; ++i) {
 
-        // Measure the start time
         struct timeval start, end;
-        gettimeofday(&start, NULL);
+        gettimeofday(&start_cl,NULL);
+        
+        for (int i = 0; i < numIterations; ++i) {
 
         // Read the content of the source code file
         std::ifstream sourceFile(sourceFileName);
@@ -71,6 +72,7 @@ int main(int argc, char* argv[]) {
                                        std::istreambuf_iterator<char>());
 
         // Send the request and source code content to the server
+        gettimeofday(&start, NULL);
         std::string request = sourceCodeContent;
         send(SocketForClient, request.c_str(), request.size(), 0);
 
@@ -103,11 +105,13 @@ int main(int argc, char* argv[]) {
             }
     }
 
-    close(SocketForClient);
-    
-    std::cout << "Average Response Time: " << (totalTime / successfulResponses) << " seconds" << std::endl;
-    std::cout << "Number of Successful Responses: " << successfulResponses << std::endl;
+        gettimeofday(&end_cl,NULL);
+        close(SocketForClient);
+        totalTime_cl=(end_cl.tv_sec - start_cl.tv_sec) + (end_cl.tv_usec - start_cl.tv_usec) / 1000000.0;
+        std::cout << "Throughput: " << (successfulResponses / totalTime_cl) << " seconds" << std::endl;
+        std::cout << "Average Response Time: " << (totalTime / successfulResponses) << " seconds" << std::endl;
+        std::cout << "Number of Successful Responses: " << successfulResponses << std::endl;
 
-    return 0;
+        return 0;
 }
 

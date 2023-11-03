@@ -12,17 +12,24 @@
 #include <sys/types.h>
 #include <vector>
 #include <assert.h>
+#include <queue>
+#include <map>
 
 using namespace std;
 
 int poolReady[100];
-pthread_mutex_t lock[100];
-std::string CompileAndRun(const std::string& sourceCode,int clsocket) {
+pthread_mutex_t lock[100],clr;
+pthread_cond_t poolRdy[100];
+std::queue<int> sharedq;
+std::map<int,int> index_sockfd;
+
+
+std::string CompileAndRun(const std::string& sourceCode,int threadid) {
     std::string response;
     
 
     // Create a temporary source file to store the received source code
-    std::string rfilename="received_fd"+std::to_string(clsocket)+".cpp";
+    std::string rfilename="received_fd"+std::to_string(threadid)+".cpp";
     
     std::ofstream sourceFile(rfilename);
     if (!sourceFile) {
@@ -32,11 +39,11 @@ std::string CompileAndRun(const std::string& sourceCode,int clsocket) {
 
     sourceFile << sourceCode;
     sourceFile.close();
-    std::string compilefile="compile_output"+std::to_string(clsocket)+".txt";
-    std::string outputfile="program_output"+std::to_string(clsocket)+".txt";
-    std::string execfile="executable"+std::to_string(clsocket);
-    std::string expoutput="exp_output"+std::to_string(clsocket)+".txt";
-    std::string diffoutput="diff_output"+std::to_string(clsocket)+".txt";
+    std::string compilefile="compile_output"+std::to_string(threadid)+".txt";
+    std::string outputfile="program_output"+std::to_string(threadid)+".txt";
+    std::string execfile="executable"+std::to_string(threadid);
+    std::string expoutput="exp_output"+std::to_string(threadid)+".txt";
+    std::string diffoutput="diff_output"+std::to_string(threadid)+".txt";
 
     std::string copy_cmd="cp expected_output.txt " + expoutput;
     system(copy_cmd.c_str());
@@ -96,23 +103,47 @@ std::string CompileAndRun(const std::string& sourceCode,int clsocket) {
 }
 
 void* ClientHandler(void* arg) {
-        int clientSocket=*(int *)arg;
+        int id=*(int *)arg;
 
             pid_t tid = gettid();
-            char buffer[1024];
-            memset(buffer, 0, sizeof(buffer));
-            std::cout<<"rs"<<clientSocket<<" "<<tid<<std::endl;
-            ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-          
-            std::cout<<"re"<<clientSocket<<" "<<tid<<std::endl;
-            if(bytesRead>0){
-            std::string receivedData(buffer);
-            std::string response = CompileAndRun(receivedData,clientSocket);
             
-            send(clientSocket, response.c_str(), response.size(), 0);
+            std::cout<<"debugs "<<tid<<std::endl;
+            pthread_mutex_init(&lock[id],NULL);
+            pthread_cond_init(&poolRdy[id],NULL);
+
+            cout << "Thread %d created and waiting for grading task "<< tid <<endl;
+
+            while(1){    
+                pthread_mutex_lock(&lock[id]);
+                while(poolReady[id] == 0)
+                    pthread_cond_wait(&poolRdy[id],&lock[id]);
+                pthread_mutex_unlock(&lock[id]);
+                char buffer[1024];
+                memset(buffer, 0, sizeof(buffer));
+                int fd = index_sockfd.find(id)->second;  
+                ssize_t bytesRead = recv(fd, buffer, sizeof(buffer), 0);
+            
+                std::cout<<"debuge "<<tid<<std::endl;
+                if(bytesRead>0){
+                std::string receivedData(buffer);
+                std::string response = CompileAndRun(receivedData,tid);
+                
+                send(fd, response.c_str(), response.size(), 0);
+                }
+                pthread_mutex_lock(&clr);
+                    close(fd);
+                    index_sockfd.erase(id);
+                    poolReady[id] = 0;
+                pthread_mutex_unlock(&clr);
             }
-    close(clientSocket);
-    pthread_exit(NULL);
+}
+
+int if_zero(int threads){
+    for(int i=0;i<threads;i++){
+        if(poolReady[i] == 0)
+            return i;
+    }
+    return -1;
 }
 
 int main(int argc, char* argv[]) {
@@ -150,18 +181,19 @@ int main(int argc, char* argv[]) {
     // int clients[100];
     // int counter=0;
     pthread_t threads[noThreads];
+    memset(poolReady, -1, sizeof(poolReady));
+    
     for(int i=0;i<noThreads;i++)
     {
         poolReady[i] = 0;
         int rc = pthread_create(&threads[i], NULL, ClientHandler, (void *)i);
         assert(rc == 0);
     }
+    
+    pthread_mutex_init(&clr,NULL);
 
-    for(int i=0;i<noThreads ;i++)
-    {
-        pthread_join(threads[i],NULL);
-    }
-
+    
+    int zero_index;
     while (true) {    
         int clientSocket = accept(serverSocket, NULL, NULL);
         if (clientSocket == -1) {
@@ -169,12 +201,21 @@ int main(int argc, char* argv[]) {
             continue;
             }
 
+        sharedq.push(clientSocket);
+        zero_index=if_zero(noThreads);
 
-            if (pthread_create(&thread, NULL, ClientHandler, &clients[counter]) != 0) {
-                std::cout<<"i am here2"<<std::endl;
-                perror("Thread creation error");
-            }
-            counter++;
+        if(zero_index != -1){
+            index_sockfd.insert(pair<int,int>(zero_index,clientSocket));
+            pthread_mutex_lock(&lock[zero_index]);
+                poolReady[zero_index]=1;
+            pthread_cond_signal(&poolRdy[zero_index]);
+            pthread_mutex_unlock(&lock[zero_index]);
+            sharedq.pop();
+        }
+        else 
+            cout<<"All threads are working on grading requests, your grading request has to wait"<<endl;
+            continue;
+            //wait logic
     }
 
     close(serverSocket);
