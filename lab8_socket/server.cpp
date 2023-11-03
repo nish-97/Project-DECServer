@@ -18,12 +18,12 @@ using namespace std;
 
 /*Add .gitignore*/
 
-std::string CompileAndRun(const std::string& sourceCode,int clsocket) {
+std::string CompileAndRun(const std::string& sourceCode,int tid) {
     std::string response;
     
 
     // Create a temporary source file to store the received source code
-    std::string rfilename="received_fd"+std::to_string(clsocket)+".cpp";
+    std::string rfilename="received_fd"+std::to_string(tid)+".cpp";
     
     std::ofstream sourceFile(rfilename);
     if (!sourceFile) {
@@ -33,11 +33,11 @@ std::string CompileAndRun(const std::string& sourceCode,int clsocket) {
 
     sourceFile << sourceCode;
     sourceFile.close();
-    std::string compilefile="compile_output"+std::to_string(clsocket)+".txt";
-    std::string outputfile="program_output"+std::to_string(clsocket)+".txt";
-    std::string execfile="executable"+std::to_string(clsocket);
-    std::string expoutput="exp_output"+std::to_string(clsocket)+".txt";
-    std::string diffoutput="diff_output"+std::to_string(clsocket)+".txt";
+    std::string compilefile="compile_output"+std::to_string(tid)+".txt";
+    std::string outputfile="program_output"+std::to_string(tid)+".txt";
+    std::string execfile="executable"+std::to_string(tid);
+    std::string expoutput="exp_output"+std::to_string(tid)+".txt";
+    std::string diffoutput="diff_output"+std::to_string(tid)+".txt";
 
     std::string copy_cmd="cp expected_output.txt " + expoutput;
     system(copy_cmd.c_str());
@@ -108,7 +108,7 @@ void* ClientHandler(void* arg) {
             std::cout<<"re"<<clientSocket<<" "<<tid<<std::endl;
             if(bytesRead>0){
             std::string receivedData(buffer);
-            std::string response = CompileAndRun(receivedData,clientSocket);
+            std::string response = CompileAndRun(receivedData,tid);
             
             send(clientSocket, response.c_str(), response.size(), 0);
             }
