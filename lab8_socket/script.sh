@@ -18,9 +18,9 @@ loopNumless=`expr $loopNum - 1`
 throughputs=()
 
 # Start multiple clients in the background
-for ((i = 1; i <= $numClients; i++)); do
-    file=source.cpp
-    ./client 127.0.0.1:5555 $file $loopNum $sleepTime $timeout > client_$i.txt &
+for ((i = 1; i <= $numClients; i++)); 
+do
+    ./client 127.0.0.1:5555 source.cpp $loopNum $sleepTime $timeout > client_$i.txt &
 done
 #wait
 
@@ -85,7 +85,7 @@ for ((i = 1; i <= $numClients; i++)); do
     # throughput_i=$(echo "scale=3; $requests_i / (($requests_i * $time_i) + ($sleepTime * $loopNumless))" | bc)
     # throughputs+=($throughput_i)
     goodPut_i=$(grep "Goodput:" client_$i.txt | awk '{print $2}')
-    goodPut=`expr $goodput + $goodPut_i
+    goodPut=$(echo "scale=3; $goodPut + $goodPut_i" | bc)
 done
 
 # overallTimeoutRate=$(echo "scale=3; ($totalTimeouts * 100) / ($numClients * $loopNum)" | bc)

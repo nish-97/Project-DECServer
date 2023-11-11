@@ -1,16 +1,20 @@
-Overall Throughput_5: 1.557 requests/second
-Average Response Time_5: 3.185 seconds
-Overall Throughput_10: 2.225 requests/second
-Average Response Time_10: 5.342 seconds
-Overall Throughput_15: 2.448 requests/second
-Average Response Time_15: 9.267 seconds
-Overall Throughput_20: 2.262 requests/second
-Average Response Time_20: 16.119 seconds
-Overall Throughput_25: 2.592 requests/second
-Average Response Time_25: 17.578 seconds
-Overall Throughput_30: 2.726 requests/second
-Average Response Time_30: 21.390 seconds
-Overall Throughput_35: 2.909 requests/second
-Average Response Time_35: 24.542 seconds
-Overall Throughput_40: 2.881 requests/second
-Average Response Time_40: 28.262 seconds
+Overall Throughput_5: 1.0950861 requests/second
+Average Response Time_5: 4.594 seconds
+Overall Throughput_10: 1.4157930 requests/second
+Average Response Time_10: 9.678 seconds
+Overall Throughput_15: 1.6303007 requests/second
+Average Response Time_15: 14.624 seconds
+Overall Throughput_20: 1.7780725 requests/second
+Average Response Time_20: 19.605 seconds
+Overall Throughput_25: 1.8831054 requests/second
+Average Response Time_25: 24.712 seconds
+Overall Throughput_30: 1.9528849 requests/second
+Average Response Time_30: 29.885 seconds
+Overall Throughput_35: 1.9851655 requests/second
+Average Response Time_35: 34.944 seconds
+Overall Throughput_40: 2.1042896 requests/second
+Average Response Time_40: 39.896 seconds
+Overall Throughput_45: 2.1590743 requests/second
+Average Response Time_45: 44.931 seconds
+Overall Throughput_50: 2.20949022 requests/second
+Average Response Time_50: 50.118 seconds

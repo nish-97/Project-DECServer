@@ -1,20 +1,19 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
+if [ $# -ne 2 ]; then
     echo "Usage: $0 <numClients> <loopNum> <sleepTimeSeconds>"
     exit 1
 fi
 
 
-# for ((k=1; k<=30; k=k+5));
-# do
-numClients=$1
-loopNum=$2
-sleepTime=$3
+for ((k=35; k<=50; k=k+5));
+do
+numClients=$k
+loopNum=$1
+sleepTime=$2
 loopNumless=`expr $loopNum - 1`
 
 # Create an array to store individual throughputs
-throughputs=0.0
 
 # Start multiple clients in the background
 for ((i = 1; i <= $numClients; i++)); do
@@ -23,6 +22,8 @@ done
 wait
 totalRequests=0
 totalTime=0
+throughputs=0.0
+
 
 # Calculate total requests and total time
 for ((i = 1; i <= $numClients; i++)); do
@@ -35,7 +36,7 @@ for ((i = 1; i <= $numClients; i++)); do
     
     # Calculate throughput for client i
     throughput_i=$(grep "Throughput:" client_$i.txt | awk '{print $2}')
-    throughputs=`expr $throughput_i + $throughputs`
+    throughputs=$(echo "scale=3; $throughput_i + $throughputs" | bc)
 done
 
 #Calculate overall throughput as the sum of individual throughputs
@@ -61,10 +62,10 @@ done
 averageResponseTime=$(echo "scale=3; $totalResponseTime / $totalResponses" | bc)
 
 echo "Average Response Time_$numClients: $averageResponseTime seconds" >> output.txt
-# done
+done
 rm executable*
 rm program_*
 rm received_*
 rm compile_*
 # rm exp_output*
-# rm client_*
+rm client_*
