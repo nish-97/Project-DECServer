@@ -14,19 +14,20 @@
 #include <assert.h>
 #include <queue>
 #include <map>
+#include "server.h"
 
 using namespace std;
-
-int poolReady[100];
-pthread_mutex_t lock[100],clr;
-pthread_cond_t poolRdy[100];
+int poolReady[THREAD_POOL_MAX];
+pthread_mutex_t lock[THREAD_POOL_MAX],clr,sharedq_lock;
+pthread_cond_t poolRdy[THREAD_POOL_MAX],sharedq_condvar;
 std::queue<int> sharedq;
+std::ofstream reqinq;
 std::map<int,int> index_sockfd;
 
 
 std::string CompileAndRun(const std::string& sourceCode,int threadid) {
     std::string response;
-    
+
 
     // Create a temporary source file to store the received source code
     std::string rfilename="received_fd"+std::to_string(threadid)+".cpp";
@@ -104,15 +105,15 @@ std::string CompileAndRun(const std::string& sourceCode,int threadid) {
 
 void* ClientHandler(void* arg) {
         int id=*(int *)arg;
-
+        // cout<<"this is the index received"<<id;
             pid_t tid = gettid();
             
-            std::cout<<"debugs "<<tid<<std::endl;
+            // std::cout<<"debugs "<<tid<<std::endl;
             pthread_mutex_init(&lock[id],NULL);
             pthread_cond_init(&poolRdy[id],NULL);
 
-            cout << "Thread %d created and waiting for grading task "<< tid <<endl;
-
+            cout << "Thread created and waiting for grading task "<< tid <<endl;
+            //cout<<"after creating thread"<<poolReady[id]<<endl;
             while(1){    
                 pthread_mutex_lock(&lock[id]);
                 while(poolReady[id] == 0)
@@ -136,6 +137,45 @@ void* ClientHandler(void* arg) {
                     poolReady[id] = 0;
                 pthread_mutex_unlock(&clr);
             }
+}
+
+void* qCheck(void* arg) {
+    int threadCount=*(int *)arg;
+    //int tries=5;
+    while(1){
+        int zero_index=if_zero(threadCount);                
+        pthread_mutex_lock(&sharedq_lock);
+        while(sharedq.size()==0)              //no req in sharedq
+            pthread_cond_wait(&sharedq_condvar,&sharedq_lock);
+        pthread_mutex_unlock(&sharedq_lock);
+           
+        
+            if(zero_index==-1){          //req in sharedq but no thread is free
+                // sleep(5);
+                continue;
+            }
+            else if(zero_index!=-1){    //req in sharedq and atleast a thread is available
+                index_sockfd.insert(pair<int,int>(zero_index,sharedq.front()));
+                pthread_mutex_lock(&lock[zero_index]);
+                    poolReady[zero_index]=1;
+                pthread_cond_signal(&poolRdy[zero_index]);
+                pthread_mutex_unlock(&lock[zero_index]);
+                sharedq.pop();
+            }
+    }        
+}
+
+void* reqinqueue(void *arg){
+    
+    while(1){
+        pthread_mutex_lock(&sharedq_lock);
+        while(sharedq.size()==0)
+            pthread_cond_wait(&sharedq_condvar,&sharedq_lock);
+        pthread_mutex_unlock(&sharedq_lock);
+
+        reqinq<<"Average no. of requests in queue are: " << sharedq.size() <<endl;
+        sleep(2);
+    }
 }
 
 int if_zero(int threads){
@@ -178,44 +218,52 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Server listening on port " << port << std::endl;
 
-    // int clients[100];
-    // int counter=0;
+    int arr[noThreads];
     pthread_t threads[noThreads];
     memset(poolReady, -1, sizeof(poolReady));
+    memset(poolReady, 0, noThreads*sizeof(int));
     
     for(int i=0;i<noThreads;i++)
+        arr[i]=i;
+
+    for(int i=0;i<noThreads;i++)
     {
-        poolReady[i] = 0;
-        int rc = pthread_create(&threads[i], NULL, ClientHandler, (void *)&i);
+        //cout<<"before calling thread"<<poolReady[i]<<endl;
+        int rc = pthread_create(&threads[i], NULL, ClientHandler, (void *)&arr[i]);
         assert(rc == 0);
     }
     
-    pthread_mutex_init(&clr,NULL);
+    reqinq.open("avg_req_in_queue.txt");
+    if(!reqinq){
+        cerr<<"File could not be opened"<<endl;
+        exit(1);
+    }
 
-    
+    pthread_mutex_init(&clr,NULL);
+    pthread_mutex_init(&sharedq_lock,NULL);
+    pthread_cond_init(&sharedq_condvar,NULL);
+
+    pthread_t qcheck,req_in_q;
+    int rc = pthread_create(&qcheck, NULL, qCheck, (void *)&noThreads);
+    assert(rc == 0);
+    rc = pthread_create(&req_in_q, NULL, reqinqueue, NULL);
+    assert(rc == 0);
+
     int zero_index;
-    while (true) {    
+    while (true) {
         int clientSocket = accept(serverSocket, NULL, NULL);
         if (clientSocket == -1) {
             perror("Accept error");
             continue;
             }
-
-        sharedq.push(clientSocket);
-        zero_index=if_zero(noThreads);
-
-        if(zero_index != -1){
-            index_sockfd.insert(pair<int,int>(zero_index,clientSocket));
-            pthread_mutex_lock(&lock[zero_index]);
-                poolReady[zero_index]=1;
-            pthread_cond_signal(&poolRdy[zero_index]);
-            pthread_mutex_unlock(&lock[zero_index]);
-            sharedq.pop();
+        if(sharedq.size()==0){
+        pthread_mutex_lock(&sharedq_lock);
+            sharedq.push(clientSocket);
+        pthread_cond_broadcast(&sharedq_condvar);
+        pthread_mutex_unlock(&sharedq_lock);
         }
         else 
-            cout<<"All threads are working on grading requests, your grading request has to wait"<<endl;
-            continue;
-            //wait logic
+        sharedq.push(clientSocket);
     }
 
     close(serverSocket);

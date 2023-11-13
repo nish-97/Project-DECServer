@@ -1,0 +1,90 @@
+Overall Timeout Rate_5: 0 timeouts/second
+Overall Error Rate_5: 0 errors/second
+Overall Goodput_5: 2.239008 requests/second
+Request Sent Rate(Th)_5: 2.239008 requests/second
+Average Response Time_5: .899 seconds
+Average CPU Utilisation_5 : 40.250 %
+Average no of Threads_5 : 16.000 Threads
+Average no of Requests in Queue_5 : 1.000 Requests
+
+Overall Timeout Rate_10: 0 timeouts/second
+Overall Error Rate_10: 0 errors/second
+Overall Goodput_10: 3.625690 requests/second
+Request Sent Rate(Th)_10: 3.625690 requests/second
+Average Response Time_10: 1.438 seconds
+Average CPU Utilisation_10 : 63.400 %
+Average no of Threads_10 : 16.000 Threads
+Average no of Requests in Queue_10 : 1.333 Requests
+
+Overall Timeout Rate_15: 0 timeouts/second
+Overall Error Rate_15: 0 errors/second
+Overall Goodput_15: 4.789829 requests/second
+Request Sent Rate(Th)_15: 4.789829 requests/second
+Average Response Time_15: 1.841 seconds
+Average CPU Utilisation_15 : 67.600 %
+Average no of Threads_15 : 16.000 Threads
+Average no of Requests in Queue_15 : 1.250 Requests
+
+Overall Timeout Rate_20: 0 timeouts/second
+Overall Error Rate_20: 0 errors/second
+Overall Goodput_20: 5.421078 requests/second
+Request Sent Rate(Th)_20: 5.421078 requests/second
+Average Response Time_20: 2.386 seconds
+Average CPU Utilisation_20 : 80.500 %
+Average no of Threads_20 : 16.000 Threads
+Average no of Requests in Queue_20 : 1.200 Requests
+
+Overall Timeout Rate_25: 0 timeouts/second
+Overall Error Rate_25: 0 errors/second
+Overall Goodput_25: 6.111806 requests/second
+Request Sent Rate(Th)_25: 6.111806 requests/second
+Average Response Time_25: 2.789 seconds
+Average CPU Utilisation_25 : 85.857 %
+Average no of Threads_25 : 16.000 Threads
+Average no of Requests in Queue_25 : 2.800 Requests
+
+Overall Timeout Rate_30: 0 timeouts/second
+Overall Error Rate_30: 0 errors/second
+Overall Goodput_30: 6.305491 requests/second
+Request Sent Rate(Th)_30: 6.305491 requests/second
+Average Response Time_30: 3.462 seconds
+Average CPU Utilisation_30 : 87.625 %
+Average no of Threads_30 : 16.000 Threads
+Average no of Requests in Queue_30 : 4.125 Requests
+
+Overall Timeout Rate_35: .9720074 timeouts/second
+Overall Error Rate_35: 0 errors/second
+Overall Goodput_35: 5.816744 requests/second
+Request Sent Rate(Th)_35: 6.7887514 requests/second
+Average Response Time_35: 3.450 seconds
+Average CPU Utilisation_35 : 89.111 %
+Average no of Threads_35 : 16.000 Threads
+Average no of Requests in Queue_35 : 7.111 Requests
+
+Overall Timeout Rate_40: .7693133 timeouts/second
+Overall Error Rate_40: 0 errors/second
+Overall Goodput_40: 6.488209 requests/second
+Request Sent Rate(Th)_40: 7.2575223 requests/second
+Average Response Time_40: 3.970 seconds
+Average CPU Utilisation_40 : 90.000 %
+Average no of Threads_40 : 16.000 Threads
+Average no of Requests in Queue_40 : 11.444 Requests
+
+Overall Timeout Rate_45: .1818590 timeouts/second
+Overall Error Rate_45: 0 errors/second
+Overall Goodput_45: 6.6309848 requests/second
+Request Sent Rate(Th)_45: 6.8128438 requests/second
+Average Response Time_45: 5.182 seconds
+Average CPU Utilisation_45 : 91.090 %
+Average no of Threads_45 : 16.000 Threads
+Average no of Requests in Queue_45 : 15.818 Requests
+
+Overall Timeout Rate_50: .8768915 timeouts/second
+Overall Error Rate_50: 0 errors/second
+Overall Goodput_50: 6.0270650 requests/second
+Request Sent Rate(Th)_50: 6.9039565 requests/second
+Average Response Time_50: 5.608 seconds
+Average CPU Utilisation_50 : 92.384 %
+Average no of Threads_50 : 16.000 Threads
+Average no of Requests in Queue_50 : 21.083 Requests
+

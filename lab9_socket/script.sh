@@ -1,10 +1,12 @@
 #!/bin/bash
 
 if [ $# -ne 4 ]; then
-    echo "Usage: $0 <numClients> <loopNum> <sleepTimeSeconds> <timeOutSeconds"
+    echo "Usage: $0 <numClients> <loopNum> <sleepTimeSeconds> <timeOutSeconds>"
     exit 1
 fi
 
+#check this script if it works on any other ip
+#updatte buffer size
 
 #for ((k=1; k<=10; k++));
 #do
@@ -18,18 +20,18 @@ loopNumless=`expr $loopNum - 1`
 throughputs=()
 
 # Start multiple clients in the background
-for ((i = 1; i <= $numClients; i++)); do
-    file=source.cpp
-    ./client 127.0.0.1:5555 $file $loopNum $sleepTime $timeout > client_$i.txt &
+for ((i = 1; i <= $numClients; i++)); 
+do
+    ./client 127.0.0.1:5555 source.cpp $loopNum $sleepTime $timeout > client_$i.txt &
 done
-#wait
+# wait
 
 s_pid=$(pgrep server)
 starttime=$(date +%s)
 echo "Average number of threads : " > nlwp.txt
 echo "Average CPU Utilisation : " > cput.txt
 nlwp=$(ps -T -p $s_pid | wc -l)
-nlwp=`expr $nlwp - 2`
+nlwp=`expr $nlwp - 4`
 echo $nlwp >> nlwp.txt
 # vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $16}' >> cput.txt
 vmstat 2 >> cput.txt &
@@ -48,7 +50,7 @@ while [[ $less -gt 1 ]];
         echo "Average number of threads : " >> nlwp.txt
         echo "Average CPU Utilisation : " >> cput.txt
         nlwp=$(ps -T -p $s_pid | wc -l)
-        nlwp=`expr $nlwp - 2`
+        nlwp=`expr $nlwp - 4`
         echo $nlwp >> nlwp.txt
         # vmstat | tail -1 | sed -E 's/[ ]+/./g' | awk -F. '{print $16}' >> cput.txt
     fi
@@ -57,12 +59,12 @@ done
 
 kill -9 $v_pid
 echo "$nlwp"
-
+ 
 totalRequests=0
 totalTime=0
 totalTimeoutRate=0.0
 totalErrorRate=0.0
-
+goodPut=0.0
 # overallErrorRate=0
 # overallTimeoutRate=0
 # Calculate total requests and total time
@@ -82,8 +84,10 @@ for ((i = 1; i <= $numClients; i++)); do
     totalTime=$(echo "scale=3; $totalTime + $time_i" | bc)
     
     # Calculate throughput for client i
-    throughput_i=$(echo "scale=3; $requests_i / (($requests_i * $time_i) + ($sleepTime * $loopNumless))" | bc)
-    throughputs+=($throughput_i)
+    # throughput_i=$(echo "scale=3; $requests_i / (($requests_i * $time_i) + ($sleepTime * $loopNumless))" | bc)
+    # throughputs+=($throughput_i)
+    goodPut_i=$(grep "Goodput:" client_$i.txt | awk '{print $2}')
+    goodPut=$(echo "scale=3; $goodPut + $goodPut_i" | bc)
 done
 
 # overallTimeoutRate=$(echo "scale=3; ($totalTimeouts * 100) / ($numClients * $loopNum)" | bc)
@@ -94,14 +98,15 @@ echo "Overall Error Rate_$numClients: $totalErrorRate errors/second" >> output.t
 
 
 #Calculate overall throughput as the sum of individual throughputs
-overallThroughput=0
+# overallThroughput=0
 
-for throughput in "${throughputs[@]}"; do
-    overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
-done
-echo "Overall Throughput_$numClients: $overallThroughput requests/second" >> output.txt
-requestSentRate=$(echo "scale=3; $totalTimeoutRate + $totalErrorRate + $overallThroughput" | bc)
-echo "Request Sent Rate_$numClients: $requestSentRate requests/second" >> output.txt
+# for throughput in "${throughputs[@]}"; do
+#     overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
+# done
+# echo "Overall Goodput_$numClients: $overallThroughput requests/second" >> output.txt
+echo "Overall Goodput_$numClients: $goodPut requests/second" >> output.txt
+requestSentRate=$(echo "scale=3; $totalTimeoutRate + $totalErrorRate + $goodPut" | bc)
+echo "Request Sent Rate(Th)_$numClients: $requestSentRate requests/second" >> output.txt
 
 
 
@@ -123,8 +128,10 @@ echo "Average Response Time_$numClients: $averageResponseTime seconds" >> output
 
 cput=$(cat cput.txt | sed -E 's/[ ]+/./g' | awk -F. '{print $(NF-2)}' | grep -E "[0-9]+")
 lwp=$(cat nlwp.txt | grep -E "[0-9]+")
+reqq=$(cat avg_req_in_queue.txt | grep -a "Average no. of requests" | awk '{print $8}')
 avg_cpu_ut=0
 avg_nlwp=0
+avg_req_inq=0
 it=0
 for i in $cput
     do
@@ -140,10 +147,22 @@ for i in $lwp
     avg_nlwp=`expr $i + $avg_nlwp`
     it=`expr $it + 1`
 done
+
+it=0
+for i in $reqq
+    do
+    avg_req_inq=`expr $i + $avg_req_inq`
+    it=`expr $it + 1`
+done
+
 avg_nlwp=$(echo "scale=3; $avg_nlwp / $it" | bc)
+avg_req_inq=$(echo "scale=3; $avg_req_inq / $it" | bc)
 
 echo "Average CPU Utilisation_$numClients : $avg_cpu_ut %" >> output.txt
 echo "Average no of Threads_$numClients : $avg_nlwp Threads" >> output.txt
+echo "Average no of Requests in Queue_$numClients : $avg_req_inq Requests" >> output.txt
+# cp /dev/null avg_req_in_queue.txt
+:> avg_req_in_queue.txt
 
 echo "" >> output.txt
 rm program_*
@@ -151,7 +170,7 @@ rm received_*
 rm compile_*
 rm executable*
 rm exp_output*
-# rm client_*
+rm client_*
 # rm diff_*
 
 #done
