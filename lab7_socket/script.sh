@@ -15,9 +15,7 @@ do
 numClients=$k
 loopNum=$1
 sleepTime=$2
-loopNumless=`expr $loopNum - 1`
 
-# Create an array to store individual throughputs
 
 # Start multiple clients in the background
 for ((i = 1; i <= $numClients; i++)); do
@@ -28,26 +26,12 @@ totalRequests=0
 totalTime=0
 throughputs=0.0
 
-
-# Calculate total requests and total time
 for ((i = 1; i <= $numClients; i++)); do
-    # Parse client log file to extract total requests and total time
-    # requests_i=$(grep "Number of Successful Responses" client_$i.txt | awk '{print $5}')
-    # time_i=$(grep "Average Response Time" client_$i.txt | awk '{print $4}')
-    # # Accumulate values for all clients
-    # totalRequests=`expr $totalRequests + $requests_i`
-    # totalTime=$(echo "scale=3; $totalTime + $time_i" | bc)
-    
     # Calculate throughput for client i
     throughput_i=$(grep "Throughput:" client_$i.txt | awk '{print $2}')
     throughputs=$(echo "scale=3; $throughput_i + $throughputs" | bc)
 done
 
-#Calculate overall throughput as the sum of individual throughputs
-# overallThroughput=0
-# for throughput in "${throughputs[@]}"; do
-#     overallThroughput=$(echo "$overallThroughput + $throughput" | bc)
-# done
 
 echo "Overall Throughput_$numClients: $throughputs requests/second" >> output.txt
 
