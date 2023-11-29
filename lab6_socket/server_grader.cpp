@@ -8,10 +8,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+using namespace std;
 // Function to compile and execute the source code
 std::string compileAndRun(const std::string& sourceCode) {
     std::string response;
-    
+
+    //create the received file    
     std::ofstream sourceFile("received_source.cpp");
     if (!sourceFile) {
         response = "COMPILER ERROR\nFailed to create a source file for compilation.";
@@ -25,6 +27,7 @@ std::string compileAndRun(const std::string& sourceCode) {
     std::string compileCommand = "g++ -o executable received_source.cpp > compile_output.txt 2>&1";
     int compileExitCode = system(compileCommand.c_str());
 
+    //handling compiler error
     if (compileExitCode != 0) {
         std::ifstream compileOutputFile("compile_output.txt");
         std::ostringstream compileOutputContent;
@@ -35,6 +38,7 @@ std::string compileAndRun(const std::string& sourceCode) {
         int runExitCode = system("./executable > program_output.txt 2>&1");
 
         if (runExitCode != 0) {
+            //handling runtime error
             std::ifstream runOutputFile("program_output.txt");
             std::ostringstream runOutputContent;
             runOutputContent << runOutputFile.rdbuf();
@@ -78,8 +82,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int port = std::atoi(argv[1]);
-
+    int port = std::atoi(argv[1]); //extracting port no
+ 
     // Create a socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == -1) {
@@ -116,25 +120,24 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // Receive client request
-        char buffer[1024];
+        //receiving file size
+        size_t filesize;
+        ssize_t size_received=recv(clientSocket,&filesize,sizeof(filesize),0);
+        cout<<"File size is :"<<filesize<<endl;
+
+        // Receiving file
+        char buffer[filesize+1];
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+        cout<<"Received file"<<endl;
 
         if (bytesRead <= 0) {
             close(clientSocket);
             continue;
         }
 
-        // std::istringstream request(buffer);
-        // std::string serverIPPort, sourceFileName;
-        // request >> serverIPPort >> sourceFileName;
-
-
         // Convert the received data to a string
         std::string receivedData(buffer);
-
-        // Process the request (compile and run)
         std::string response = compileAndRun(receivedData);
 
         // Send the response back to the client

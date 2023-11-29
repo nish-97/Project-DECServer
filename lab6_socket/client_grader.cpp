@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+using namespace std;
+
 
 int main(int argc, char* argv[]) {
     if (argc != 3) {
@@ -12,8 +14,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::string serverIPPort = argv[1];
-    std::string sourceFileName = argv[2];
+    std::string serverIPPort = argv[1];  //IP:port
+    std::string sourceFileName = argv[2];  //source file name
 
     // Extract server IP and port from the command line argument
     size_t colonPos = serverIPPort.find(':');
@@ -22,6 +24,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    //extracting IP and port number
     std::string serverIP = serverIPPort.substr(0, colonPos);
     int port = std::atoi(serverIPPort.substr(colonPos + 1).c_str());
 
@@ -32,7 +35,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Connect to the server
     // Data structure for socket
     struct sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
@@ -43,6 +45,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Connect to the server
     if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
         perror("Connection error");
         close(clientSocket);
@@ -50,12 +53,21 @@ int main(int argc, char* argv[]) {
     }
 
       // Read the content of the source code file
-        std::ifstream sourceFile(sourceFileName);
+        std::ifstream sourceFile(sourceFileName,ios::binary | ios::ate);
         if (!sourceFile) {
             std::cerr << "Error opening source code file" << std::endl;
             close(clientSocket);
-            return 1;
+            return -1;
         }
+
+        //get file size
+        size_t filesize= sourceFile.tellg();
+        sourceFile.seekg(0,std::ios::beg);
+        std::cout<<filesize<<std::endl;
+        
+        //send file size to server
+        send(clientSocket,&filesize, sizeof(filesize),0);
+
         //read contents of sourceFile linebyline until EOF and copy it to sourceCodeContent
         std::string sourceCodeContent((std::istreambuf_iterator<char>(sourceFile)),
                                        std::istreambuf_iterator<char>());
@@ -63,6 +75,7 @@ int main(int argc, char* argv[]) {
         // Send the request and source code content to the server
         std::string request = sourceCodeContent;
         send(clientSocket, request.c_str(), request.size(), 0);
+        cout<<"File sent to server for grading"<<endl;
 
     // Receive and display the server response
     char buffer[1024];
