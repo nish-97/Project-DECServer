@@ -5,8 +5,12 @@ if [ $# -ne 2 ]; then
     exit 1
 fi
 
+IP="10.130.171.134"
+PORT="5555"
+SOURCE="source_code.cpp"
 
-for ((k=35; k<=50; k=k+5));
+# for ((k=35; k<=50; k=k+5));
+for ((k=5; k<=8; k=k+5));
 do
 numClients=$k
 loopNum=$1
@@ -17,7 +21,7 @@ loopNumless=`expr $loopNum - 1`
 
 # Start multiple clients in the background
 for ((i = 1; i <= $numClients; i++)); do
-    ./client 127.0.0.1:5555 source_code.cpp $loopNum $sleepTime > client_$i.txt &
+    ./client $IP:$PORT $SOURCE $loopNum $sleepTime > client_$i.txt &
 done
 wait
 totalRequests=0

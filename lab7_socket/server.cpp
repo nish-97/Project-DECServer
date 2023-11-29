@@ -7,7 +7,8 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
+using namespace std;
+// Function to compile and execute the source code
 std::string CompileAndRun(const std::string& sourceCode) {
     std::string response;
 
@@ -24,7 +25,7 @@ std::string CompileAndRun(const std::string& sourceCode) {
     // Compile the received source code
     std::string compileCommand = "g++ -o executable received_source.cpp > compile_output.txt 2>&1";
     int compileExitCode = system(compileCommand.c_str());
-
+    //handling compiler error
     if (compileExitCode != 0) {
         std::ifstream compileOutputFile("compile_output.txt");
         std::ostringstream compileOutputContent;
@@ -35,6 +36,7 @@ std::string CompileAndRun(const std::string& sourceCode) {
         int runExitCode = system("./executable > program_output.txt 2>&1");
 
         if (runExitCode != 0) {
+            //handling runtime error
             std::ifstream runOutputFile("program_output.txt");
             std::ostringstream runOutputContent;
             runOutputContent << runOutputFile.rdbuf();
@@ -78,14 +80,16 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int port = std::atoi(argv[1]);
+    int port = std::atoi(argv[1]);    //extracting port no
 
+     // Create a socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == -1) {
         perror("Socket creation error");
         return 1;
     }
 
+    // Bind to the specified port    
     struct sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_addr.s_addr = INADDR_ANY;
@@ -96,6 +100,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Listen for incoming connections
     if (listen(serverSocket, SOMAXCONN) == -1) {
         perror("Listen error");
         close(serverSocket);
@@ -104,7 +109,9 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Server listening on port " << port << std::endl;
 
+    //server listening on one port as a listener socket & creates new socket everytime it accepts a connection
     while (true) {
+        // Accept a connection from a client
         int clientSocket = accept(serverSocket, NULL, NULL);
         if (clientSocket == -1) {
             perror("Accept error");
@@ -112,21 +119,31 @@ int main(int argc, char* argv[]) {
         }
 
         int error; 
-        socklen_t len = sizeof(error);
+        socklen_t len = sizeof(error); 
         
         while(true){
-        char buffer[1024];
+        //receiving file size
+        size_t filesize;
+        ssize_t size_received=recv(clientSocket,&filesize,sizeof(filesize),0);
+        cout<<"File size is :"<<filesize<<endl;
+
+        // Receiving file
+        char buffer[filesize+1];
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+        
+        //handling any error in receiving the file by socket    
         int res = getsockopt(clientSocket, SOL_SOCKET, SO_ERROR, &error,&len);
         if (bytesRead == 0) {
-        //std::cout<<"i am here"<<std::endl;
+            //if the client closes the socket
             break;
         }
 
         if(bytesRead < 0){
+            //if there is no data to receive
             continue;
         }
+        cout<<"Received file"<<endl;
 
         // Convert the received data to a string
         std::string receivedData(buffer);
@@ -138,7 +155,6 @@ int main(int argc, char* argv[]) {
         send(clientSocket, response.c_str(), response.size(), 0);
     }
         close(clientSocket);
-        //std::cout<<"i am here2"<<std::endl;
 
   }
     close(serverSocket);
