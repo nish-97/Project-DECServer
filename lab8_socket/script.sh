@@ -15,7 +15,7 @@ numClients=$1
 loopNum=$2
 sleepTime=$3
 timeout=$4
-# loopNumless=`expr $loopNum - 1`
+
 
 
 # Start multiple clients in the background
