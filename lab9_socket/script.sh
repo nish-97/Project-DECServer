@@ -24,18 +24,13 @@ do
 done
 # wait
 
-s_pid=$(pgrep server)  #PID of server
 starttime=$(date +%s)  #start time of client execution
-echo "Average number of threads : " > nlwp.txt
 echo "Average CPU Utilisation : " > cput.txt
-nlwp=$(ps -T -p $s_pid | wc -l)  #number of threads of server 
-nlwp=`expr $nlwp - 4`   #deducting extra lines
-echo $nlwp >> nlwp.txt
+
 
 vmstat 2 >> cput.txt &  #running vmstat in background
 v_pid=$(pgrep vmstat)  #PID of vmstat
 
-echo $nlwp
 less=$(ps aux | grep -i "./client $IP" | wc -l)  #count of clients running
 
 while [[ $less -gt 1 ]];   #execute until there is atleast 2 threads
@@ -45,17 +40,12 @@ while [[ $less -gt 1 ]];   #execute until there is atleast 2 threads
  
     if [[ $diff -gt 2 ]]; then  #atleast one client exists
         starttime=$(date +%s)  # update startime
-        echo "Average number of threads : " >> nlwp.txt
         echo "Average CPU Utilisation : " >> cput.txt
-        nlwp=$(ps -T -p $s_pid | wc -l)  #number of threads of server
-        nlwp=`expr $nlwp - 4`
-        echo $nlwp >> nlwp.txt
     fi
     less=$(ps aux | grep -i "./client $IP" | wc -l)  #count of clients running
 done
 
 kill -9 $v_pid  #kill the vmstat process
-echo "$nlwp"
  
 totalRequests=0
 totalTime=0
@@ -109,10 +99,8 @@ echo "Average Response Time_$numClients: $averageResponseTime seconds" >> output
 
 #parse client txt file to get no of thread and cpu utilisation and no. of reqs in queue
 cput=$(cat cput.txt | sed -E 's/[ ]+/./g' | awk -F. '{print $(NF-2)}' | grep -E "[0-9]+")
-lwp=$(cat nlwp.txt | grep -E "[0-9]+")
 reqq=$(cat avg_req_in_queue.txt | grep -a "Average no. of requests" | awk '{print $8}')
 avg_cpu_ut=0
-avg_nlwp=0
 avg_req_inq=0
 it=0
 for i in $cput
@@ -124,24 +112,15 @@ done
 avg_cpu_ut=$(echo "scale=3; $avg_cpu_ut / $it" | bc)
 
 it=0
-for i in $lwp
-    do
-    avg_nlwp=`expr $i + $avg_nlwp`
-    it=`expr $it + 1`
-done
-
-it=0
 for i in $reqq
     do
     avg_req_inq=`expr $i + $avg_req_inq`
     it=`expr $it + 1`
 done
 
-avg_nlwp=$(echo "scale=3; $avg_nlwp / $it" | bc)
 avg_req_inq=$(echo "scale=3; $avg_req_inq / $it" | bc)
 
 echo "Average CPU Utilisation_$numClients : $avg_cpu_ut %" >> output.txt
-echo "Average no of Threads_$numClients : $avg_nlwp Threads" >> output.txt
 echo "Average no of Requests in Queue_$numClients : $avg_req_inq Requests" >> output.txt
 :> avg_req_in_queue.txt
 
