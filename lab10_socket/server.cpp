@@ -21,6 +21,10 @@ using namespace std;
 namespace fs = filesystem;
 
 map<string, string> idStatusMap;
+pthread_mutex_t lockQueue;
+pthread_cond_t cv;
+
+queue<string> taskqueue;
 
 void CompileAndRun(const string &requestID)
 {
@@ -107,10 +111,15 @@ void CompileAndRun(const string &requestID)
     }
 }
 
-string generateUniqueID()
-{
-    time_t timestamp = time(nullptr);
-    return "ID_" + to_string(timestamp);
+string generateUniqueID() {
+    auto now = std::chrono::system_clock::now();
+    auto since_epoch = now.time_since_epoch();
+    auto micros = std::chrono::duration_cast<std::chrono::microseconds>(since_epoch);
+
+    // Convert microseconds since epoch to string
+    std::ostringstream oss;
+    oss << "ID_" << micros.count();
+    return oss.str();
 }
 
 void handleNewRequest(int clientSocket)
@@ -129,33 +138,14 @@ void handleNewRequest(int clientSocket)
 
     string filePath = folderPath + "received_code.cpp";
 
-    // go to the folder to recieve file
-    // string cd = "cd " + folderPath;
-    // system(cd.c_str());
-
-    // // Receive client request
-
-    // char buffer[1024];
-    // string recievedCode;
-
-    // // memset(buffer, 0, sizeof(buffer));
-    // ssize_t bytesRead = 0;
-    // while ((bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0))>0)
-    // {
-    //     recievedCode.append(buffer,bytesRead);
-    // }
-    // if (bytesRead < 0) {
-    //     // Handle receive error
-    //     std::cerr << "Error receiving data" << std::endl;
-    // }
-    // else {
-    //     // Process received data (in 'receivedData' string)
-    //     // std::cout << "Received data: " << recievedCode << std::endl;
-    // }
+    
     // receive file size
 
     size_t fileSize;
     ssize_t sizeReceived = recv(clientSocket, &fileSize, sizeof(fileSize), 0);
+    send(clientSocket,"File Size Recieved",18,0);
+
+    cout << "file size recieved"<<endl;
 
     if (sizeReceived != sizeof(fileSize))
     {
@@ -193,42 +183,19 @@ void handleNewRequest(int clientSocket)
         remainingBytes -= bytesReceived;
     }
 
-    // Loop to continuously receive data until there's no more to receive
-    // ssize_t bytesRead = 0;
-    // while ((bytesRead = recv(clientSocket, buffer, bufferSize, 0)) > 0) {
-    //     receivedCode.append(buffer, bytesRead);
-    //     // Check for the "EOF" marker to end the loop
-    //     if (receivedCode.find("EOF") != std::string::npos) {
-    //         // Remove the "EOF" marker from the received code
-    //         receivedCode.erase(receivedCode.find("EOF"));
-    //         break;
-    //     }
-
-    // }
+    send(clientSocket,"code Recieved",13,0);
 
     if (fileSize < 0)
     {
         // Handle receive error
         std::cerr << "Error receiving data" << std::endl;
     }
-    else
-    {
-        // Process received data (in 'receivedCode' string)
-        // std::cout << "Received data: " << receivedCode << std::endl;
-    }
 
-    // cout << "Chechking what byteread recieving\n";
-    // cout << buffer;
-    // cout << "Checking done ";
 
-    // std::ofstream outputFile(filePath, ios::out | ios::binary);
 
-    // Check if the file is opened successfully
     if (outputFile.is_open())
     {
-        // Write the data from 'buffer' to the file
-        // outputFile.write(buffer, bytesRead);
-        // outputFile << buffer;
+       
 
         // Check if the write operation was successful
         if (outputFile.good())
@@ -259,19 +226,11 @@ void handleNewRequest(int clientSocket)
         close(clientSocket);
         // continue;
     }
-
-    // std::istringstream request(buffer);
-    // std::string serverIPPort, sourceFileName;
-    // request >> serverIPPort >> sourceFileName;
-
-    // Convert the received data to a string
-    // std::string receivedData(buffer);
-
-    // Process the request (compile and run)
-    // std::string response = CompileAndRun(receivedData);
-
-    // Send the response back to the client
-    // send(clientSocket, response.c_str(), response.size(), 0);
+        pthread_mutex_lock(&lockQueue);
+        taskqueue.push(requestID);
+        pthread_mutex_unlock(&lockQueue);
+        pthread_cond_signal(&cv);
+    
     for (const auto &pair : idStatusMap)
     {
         std::cout << "ID: " << pair.first << ", Status: " << pair.second << std::endl;
@@ -283,10 +242,6 @@ void handleNewRequest(int clientSocket)
 void handleStatusRequest(int clientSocket, string requestId)
 {
 
-    // std::cout << "Inside handleStatusRequest" << endl;
-    // char receivedRequestId[1024];
-    // memset(receivedRequestId, 0, sizeof(receivedRequestId));
-    // ssize_t receivedRequestId_size = recv(clientSocket, receivedRequestId, sizeof(receivedRequestId), 0);
 
     string keyToCheck = requestId;
     auto it = idStatusMap.find(keyToCheck);
@@ -329,7 +284,7 @@ void crashControl(){
             string directoryName = entry.path().filename().string();
             fs::path responseFile = entry.path() / "response.txt";
             fs::path recieveFileDone = entry.path() / "recieveDone.txt";
-            cout << responseFile;
+            // cout << responseFile;
             if (fs::exists(responseFile))
             {
                 cout<<"check for response"<< endl;
@@ -339,6 +294,10 @@ void crashControl(){
             {   
                 cout << "check for recieveDone"<<endl;
                 idStatusMap[directoryName] = "Inqueue";
+                pthread_mutex_lock(&lockQueue);
+                taskqueue.push(directoryName);
+                pthread_mutex_unlock(&lockQueue);
+                pthread_cond_signal(&cv);
             }
             else
             {
@@ -351,6 +310,27 @@ void crashControl(){
         }
     }
 }
+
+void* workerThread(void* arg) {
+    while (true) {
+        pthread_mutex_lock(&lockQueue);
+        // Wait until a task is available or stop signal received
+            pthread_cond_wait(&cv, &lockQueue);
+        // pthread_mutex_unlock(&lockQueue);
+
+        if (!taskqueue.empty()) {
+            string requestId = taskqueue.front();
+            taskqueue.pop();
+            pthread_mutex_unlock(&lockQueue);
+
+            CompileAndRun(requestId);
+        } else {
+            pthread_mutex_unlock(&lockQueue);
+        }
+    }
+    return NULL;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -392,6 +372,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    pthread_t threads[16];
+
+    for (int i = 0; i < 16; ++i) {
+        pthread_create(&threads[i], NULL, workerThread, NULL);
+    }
+
     cout << "Server listening on port " << port << endl;
 
     // server listening on one port as a listener socket & creates new socket everytime it accepts a connection
@@ -409,9 +395,10 @@ int main(int argc, char *argv[])
         cout << "recieving Request Type "
              << endl;
 
-        char requestType[1024];
+        char requestType[30];
         memset(requestType, 0, sizeof(requestType));
         ssize_t requestType_size = recv(clientSocket, requestType, sizeof(requestType), 0);
+        
         cout << requestType << endl;
         size_t hyphenPos = std::string(requestType).find('-');
         string request;
@@ -423,12 +410,9 @@ int main(int argc, char *argv[])
         else
         {
             request = "status";
-            // cout << request << endl;
             requestId = std::string(requestType).substr(hyphenPos + 1);
             cout << requestId << endl;
-            // std::cout << "First part: " << firstPart << std::endl;
-            // std::cout << "Second part: " << secondPart << std::endl;
-            // Continue processing with firstPart and secondPart
+        
         }
 
         cout << request << endl;
@@ -441,12 +425,12 @@ int main(int argc, char *argv[])
             close(clientSocket);
             continue;
         }
-        // cout << "Iam here"<<endl;
-        // cout << request << endl;
+        
 
         // action according to request type
         if (strcmp(request.c_str(), "new") == 0)
         {
+            send(clientSocket, "new type request recieved", 25, 0);
             handleNewRequest(clientSocket);
         }
 

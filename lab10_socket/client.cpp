@@ -34,11 +34,7 @@ int main(int argc, char *argv[])
     int port = atoi(serverIPPort.substr(colonPos + 1).c_str());
 
     // Create a socket
-
-    if (requestType == "new")
-    // if (strcmp(requestType, "done") == 0)
-    {
-        int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (clientSocket == -1)
         {
             perror("Socket creation error");
@@ -63,7 +59,17 @@ int main(int argc, char *argv[])
             close(clientSocket);
             return 1;
         }
-        send(clientSocket, requestType.c_str(), requestType.size(), 0);
+
+    if (requestType == "new")
+    // if (strcmp(requestType, "done") == 0)
+    {
+        
+        send(clientSocket, "new", 3, 0);
+        
+        char buffer_status_recieved[25];
+        ssize_t sizeReceived = recv(clientSocket, &buffer_status_recieved, sizeof(buffer_status_recieved), 0);
+
+        cout << buffer_status_recieved << endl;
 
         // Read the content of the source code file
         ifstream sourceFile(sourceFileOrRquestId,ios::binary | ios::ate);
@@ -78,9 +84,14 @@ int main(int argc, char *argv[])
         size_t fileSize = sourceFile.tellg();
         sourceFile.seekg(0, ios::beg);
 
+        char buffer_after_sending_size[20];
+
         //send the file size to the server
 
         send(clientSocket,&fileSize,sizeof(fileSize),0);
+        
+        ssize_t sizeReceived_after_sending_size = recv(clientSocket, &buffer_after_sending_size, sizeof(buffer_after_sending_size), 0);
+        cout << buffer_after_sending_size <<endl;
 
         // read contents of sourceFile linebyline until EOF and copy it to sourceCodeContent
         string sourceCodeContent((istreambuf_iterator<char>(sourceFile)),
@@ -92,6 +103,11 @@ int main(int argc, char *argv[])
         string eofMarker = "EOF";
         send(clientSocket, eofMarker.c_str(), eofMarker.size(), 0);
         cout << "file sent "<<endl;
+
+        char buffer_after_file_send[13];
+        ssize_t sizeReceived_afetrFileSend = recv(clientSocket, &buffer_after_file_send, sizeof(buffer_after_file_send), 0);
+        cout<<buffer_after_file_send<<endl;
+
 
         // Receive and display the server response
         char buffer[1024];
@@ -112,33 +128,33 @@ int main(int argc, char *argv[])
 
     else if (requestType == "status")
     {
-        while (true)
-        {
-            int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-            if (clientSocket == -1)
-            {
-                perror("Socket creation error");
-                return 1;
-            }
+        // while (true)
+        // {
+            // int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+            // if (clientSocket == -1)
+            // {
+            //     perror("Socket creation error");
+            //     return 1;
+            // }
 
-            // Connect to the server
-            // Data structure for socket
-            struct sockaddr_in serverAddress;
-            serverAddress.sin_family = AF_INET;
-            serverAddress.sin_port = htons(port);
+            // // Connect to the server
+            // // Data structure for socket
+            // struct sockaddr_in serverAddress;
+            // serverAddress.sin_family = AF_INET;
+            // serverAddress.sin_port = htons(port);
 
-            if (inet_pton(AF_INET, serverIP.c_str(), &serverAddress.sin_addr) <= 0)
-            {
-                perror("Invalid server address");
-                close(clientSocket);
-                return 1;
-            }
-            if (connect(clientSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1)
-            {
-                perror("Connection error");
-                close(clientSocket);
-                return 1;
-            }
+            // if (inet_pton(AF_INET, serverIP.c_str(), &serverAddress.sin_addr) <= 0)
+            // {
+            //     perror("Invalid server address");
+            //     close(clientSocket);
+            //     return 1;
+            // }
+            // if (connect(clientSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1)
+            // {
+            //     perror("Connection error");
+            //     close(clientSocket);
+            //     return 1;
+            // }
 
             string statusRequest = requestType + "-" + sourceFileOrRquestId;
             send(clientSocket, statusRequest.c_str(), statusRequest.size(), 0);
@@ -186,7 +202,7 @@ int main(int argc, char *argv[])
                 // return 0;
                 sleep(2);
             }
-        }
+        // }
     }
 
     else
