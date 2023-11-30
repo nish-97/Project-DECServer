@@ -20,6 +20,7 @@
 using namespace std;
 namespace fs = filesystem;
 
+
 map<string, string> idStatusMap;
 pthread_mutex_t lockQueue;
 pthread_cond_t cv;
@@ -228,8 +229,8 @@ void handleNewRequest(int clientSocket)
     }
         pthread_mutex_lock(&lockQueue);
         taskqueue.push(requestID);
-        pthread_mutex_unlock(&lockQueue);
         pthread_cond_signal(&cv);
+        pthread_mutex_unlock(&lockQueue);
     
     for (const auto &pair : idStatusMap)
     {
@@ -314,19 +315,29 @@ void crashControl(){
 void* workerThread(void* arg) {
     while (true) {
         pthread_mutex_lock(&lockQueue);
-        // Wait until a task is available or stop signal received
+        while (taskqueue.empty())
+        {
             pthread_cond_wait(&cv, &lockQueue);
-        // pthread_mutex_unlock(&lockQueue);
-
-        if (!taskqueue.empty()) {
-            string requestId = taskqueue.front();
+        }
+         string requestId = taskqueue.front();
             taskqueue.pop();
             pthread_mutex_unlock(&lockQueue);
 
             CompileAndRun(requestId);
-        } else {
-            pthread_mutex_unlock(&lockQueue);
-        }
+        pthread_mutex_unlock(&lockQueue);
+        // Wait until a task is available or stop signal received
+            // pthread_cond_wait(&cv, &lockQueue);
+        // pthread_mutex_unlock(&lockQueue);
+
+        // if (!taskqueue.empty()) {
+        //     string requestId = taskqueue.front();
+        //     taskqueue.pop();
+        //     pthread_mutex_unlock(&lockQueue);
+
+        //     CompileAndRun(requestId);
+        // } else {
+        //     pthread_mutex_unlock(&lockQueue);
+        // }
     }
     return NULL;
 }
