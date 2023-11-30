@@ -20,20 +20,32 @@
 using namespace std;
 namespace fs = filesystem;
 
-
+// Map to store the status of each request ID
 map<string, string> idStatusMap;
+
+// Mutex and condition variable for managing the task queue
 pthread_mutex_t lockQueue;
 pthread_cond_t cv;
 
+// Queue to hold the request IDs awaiting processing
 queue<string> taskqueue;
 
+// Function to compile and run the received C++ code
 void CompileAndRun(const string &requestID)
 {
-    string response;
+    string keyToFind = requestID;
+    auto it = idStatusMap.find(keyToFind);
 
+    // Update status map to mark the request as 'processing'
+    if (it != idStatusMap.end())
+    {
+        it->second = "Under process";
+    }
+
+    string response;
     string folderPath = "./" + requestID + "/";
     string sourcePath = folderPath + "received_code.cpp";
-    string execPath = folderPath + "executable > "+folderPath +"program_output.txt";
+    string execPath = folderPath + "executable > " + folderPath + "program_output.txt";
 
     // Compile the source code and capture both stdout and stderr
     string compileCommand = "g++ -o " + execPath + " " + sourcePath + " > " + folderPath + "compile_output.txt 2>&1";
@@ -60,16 +72,14 @@ void CompileAndRun(const string &requestID)
         }
         else
         {
-            // response = "exectuable made output error or not dont know";
-            // Rest of your code for comparison and handling output errors...
             // Program executed successfully, compare its output with the expected output
-            ifstream programOutputFile(folderPath +"program_output.txt");
+            ifstream programOutputFile(folderPath + "program_output.txt");
             ostringstream programOutputContent;
             programOutputContent << programOutputFile.rdbuf();
             string programOutput = programOutputContent.str();
-            string copyCmd = "cp expected_output.txt " + folderPath+ "expected_output.txt";
+            string copyCmd = "cp expected_output.txt " + folderPath + "expected_output.txt";
             system(copyCmd.c_str());
-            ifstream expectedOutputFile(folderPath +"expected_output.txt");
+            ifstream expectedOutputFile(folderPath + "expected_output.txt");
             ostringstream expectedOutputContent;
             expectedOutputContent << expectedOutputFile.rdbuf();
             string expectedOutput = expectedOutputContent.str();
@@ -80,14 +90,14 @@ void CompileAndRun(const string &requestID)
             else
             {
                 // Handle output error
-                ofstream programOutputFile(folderPath +"program_output.txt");
+                ofstream programOutputFile(folderPath + "program_output.txt");
                 programOutputFile << programOutput;
                 programOutputFile.close();
-                
-                string diffCmd = "diff "+folderPath+"program_output.txt "+folderPath+"expected_output.txt > "+folderPath+"diff_output.txt";
+
+                string diffCmd = "diff " + folderPath + "program_output.txt " + folderPath + "expected_output.txt > " + folderPath + "diff_output.txt";
                 system(diffCmd.c_str());
 
-                ifstream diffOutputFile(folderPath +"diff_output.txt");
+                ifstream diffOutputFile(folderPath + "diff_output.txt");
                 ostringstream diffOutputContent;
                 diffOutputContent << diffOutputFile.rdbuf();
                 response = "OUTPUT ERROR\n" + programOutput + "\n" + diffOutputContent.str();
@@ -99,30 +109,32 @@ void CompileAndRun(const string &requestID)
     ofstream responseFile(responseFilePath);
     if (responseFile.is_open())
     {
-        responseFile << response << endl;
+        responseFile << response;
         responseFile.close();
     }
 
-    string keyToFind = requestID;
-    auto it = idStatusMap.find(keyToFind);
 
+    // Update status map to mark the request as 'done'
     if (it != idStatusMap.end())
     {
         it->second = "done";
     }
 }
 
-string generateUniqueID() {
-    auto now = std::chrono::system_clock::now();
+// Function to generate a unique request ID based on time
+string generateUniqueID()
+{
+    auto now = chrono::system_clock::now();
     auto since_epoch = now.time_since_epoch();
-    auto micros = std::chrono::duration_cast<std::chrono::microseconds>(since_epoch);
+    auto micros = chrono::duration_cast<chrono::microseconds>(since_epoch);
 
     // Convert microseconds since epoch to string
-    std::ostringstream oss;
+    ostringstream oss;
     oss << "ID_" << micros.count();
     return oss.str();
 }
 
+// Function to handle a new request received from a client
 void handleNewRequest(int clientSocket)
 {
 
@@ -139,28 +151,27 @@ void handleNewRequest(int clientSocket)
 
     string filePath = folderPath + "received_code.cpp";
 
-    
     // receive file size
 
     size_t fileSize;
     ssize_t sizeReceived = recv(clientSocket, &fileSize, sizeof(fileSize), 0);
-    send(clientSocket,"File Size Recieved",18,0);
+    send(clientSocket, "File Size Recieved", 18, 0);
 
-    cout << "file size recieved"<<endl;
+    cout << "file size recieved is " << fileSize << endl;
 
     if (sizeReceived != sizeof(fileSize))
     {
-        std::cerr << "Error receiving file size" << std::endl;
+        cerr << "Error receiving file size" << endl;
         close(clientSocket);
         return;
     }
 
-    //recieve file
+    // recieve file
 
-    std::ofstream outputFile(filePath, std::ios::binary);
+    ofstream outputFile(filePath, ios::binary);
     if (!outputFile.is_open())
     {
-        std::cerr << "Error opening file for writing." << std::endl;
+        cerr << "Error opening file for writing." << endl;
         close(clientSocket);
         return;
     }
@@ -171,12 +182,11 @@ void handleNewRequest(int clientSocket)
 
     while (remainingBytes > 0)
     {
-        int bytesReceived = recv(clientSocket, buffer, std::min(static_cast<size_t>(bufferSize), remainingBytes), 0);
-
+        int bytesReceived = recv(clientSocket, buffer, min(static_cast<size_t>(bufferSize), remainingBytes), 0);
 
         if (bytesReceived <= 0)
         {
-            std::cerr << "Error receiving data" << std::endl;
+            cerr << "Error receiving data" << endl;
             break;
         }
 
@@ -184,19 +194,18 @@ void handleNewRequest(int clientSocket)
         remainingBytes -= bytesReceived;
     }
 
-    send(clientSocket,"code Recieved",13,0);
+    send(clientSocket, "code Recieved", 13, 0);
+
+    cout << "code recieved" << endl;
 
     if (fileSize < 0)
     {
         // Handle receive error
-        std::cerr << "Error receiving data" << std::endl;
+        cerr << "Error receiving data" << endl;
     }
-
-
 
     if (outputFile.is_open())
     {
-       
 
         // Check if the write operation was successful
         if (outputFile.good())
@@ -206,8 +215,7 @@ void handleNewRequest(int clientSocket)
             ofstream recieveDone(recievedFileDOne);
             send(clientSocket, requestID.c_str(), requestID.size(), 0);
             idStatusMap.insert({requestID, "Inqueue"});
-
-            // send(clientSocket, response.c_str(), response.size(), 0)
+            
         }
         else
         {
@@ -227,29 +235,23 @@ void handleNewRequest(int clientSocket)
         close(clientSocket);
         // continue;
     }
-        pthread_mutex_lock(&lockQueue);
-        taskqueue.push(requestID);
-        pthread_cond_signal(&cv);
-        pthread_mutex_unlock(&lockQueue);
-    
-    for (const auto &pair : idStatusMap)
-    {
-        std::cout << "ID: " << pair.first << ", Status: " << pair.second << std::endl;
-    }
-    // CompileAndRun(requestID);
+    pthread_mutex_lock(&lockQueue);
+    taskqueue.push(requestID);
+    pthread_cond_signal(&cv);
+    pthread_mutex_unlock(&lockQueue);
+
     close(clientSocket);
 }
 
+// Function to handle status requests from clients
 void handleStatusRequest(int clientSocket, string requestId)
 {
-
-
     string keyToCheck = requestId;
     auto it = idStatusMap.find(keyToCheck);
 
     if (it != idStatusMap.end())
     {
-        std::cout << "Status for key " << keyToCheck << ": " << it->second << std::endl;
+        cout << "Status for key " << keyToCheck << ": " << it->second << endl;
         string response = it->second;
         send(clientSocket, response.c_str(), response.size(), 0);
         if (response == "done")
@@ -264,7 +266,6 @@ void handleStatusRequest(int clientSocket, string requestId)
             string removeCommand = "rm -rf \"" + requestId + "\"";
             int rc = system(removeCommand.c_str());
             idStatusMap.erase(keyToCheck);
-            // assert(rc == 0);
             close(clientSocket);
         }
     }
@@ -276,7 +277,9 @@ void handleStatusRequest(int clientSocket, string requestId)
     }
 }
 
-void crashControl(){
+// Function to control recovery after a crash or unexpected termination
+void crashControl()
+{
     fs::path currentDir = fs::current_path();
     for (const auto &entry : fs::directory_iterator(currentDir))
     {
@@ -285,15 +288,12 @@ void crashControl(){
             string directoryName = entry.path().filename().string();
             fs::path responseFile = entry.path() / "response.txt";
             fs::path recieveFileDone = entry.path() / "recieveDone.txt";
-            // cout << responseFile;
             if (fs::exists(responseFile))
             {
-                cout<<"check for response"<< endl;
                 idStatusMap[directoryName] = "done";
             }
             else if (fs::exists(recieveFileDone))
-            {   
-                cout << "check for recieveDone"<<endl;
+            {
                 idStatusMap[directoryName] = "Inqueue";
                 pthread_mutex_lock(&lockQueue);
                 taskqueue.push(directoryName);
@@ -302,9 +302,8 @@ void crashControl(){
             }
             else
             {
-                cout << fs::exists(responseFile)<<endl;
-                cout << fs::exists(recieveFileDone)<<endl;
-                cout<<"going to remove the file "<<endl;
+                cout << fs::exists(responseFile) << endl;
+                cout << fs::exists(recieveFileDone) << endl;
                 string removeCommand = "rm -rf \"" + directoryName + "\"";
                 int rc = system(removeCommand.c_str());
             }
@@ -312,36 +311,26 @@ void crashControl(){
     }
 }
 
-void* workerThread(void* arg) {
-    while (true) {
+// Worker thread function to process tasks from the task queue
+void *workerThread(void *arg)
+{
+    while (true)
+    {
         pthread_mutex_lock(&lockQueue);
         while (taskqueue.empty())
         {
             pthread_cond_wait(&cv, &lockQueue);
         }
-         string requestId = taskqueue.front();
-            taskqueue.pop();
-            pthread_mutex_unlock(&lockQueue);
-
-            CompileAndRun(requestId);
+        string requestId = taskqueue.front();
+        taskqueue.pop();
         pthread_mutex_unlock(&lockQueue);
-        // Wait until a task is available or stop signal received
-            // pthread_cond_wait(&cv, &lockQueue);
-        // pthread_mutex_unlock(&lockQueue);
 
-        // if (!taskqueue.empty()) {
-        //     string requestId = taskqueue.front();
-        //     taskqueue.pop();
-        //     pthread_mutex_unlock(&lockQueue);
+        CompileAndRun(requestId);
+        pthread_mutex_unlock(&lockQueue);
 
-        //     CompileAndRun(requestId);
-        // } else {
-        //     pthread_mutex_unlock(&lockQueue);
-        // }
     }
     return NULL;
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -373,6 +362,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Perform crash control and recovery
     crashControl();
 
     // Listen for incoming connections
@@ -383,9 +373,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Create worker threads to process tasks
     pthread_t threads[16];
 
-    for (int i = 0; i < 16; ++i) {
+    for (int i = 0; i < 16; ++i)
+    {
         pthread_create(&threads[i], NULL, workerThread, NULL);
     }
 
@@ -403,51 +395,44 @@ int main(int argc, char *argv[])
         }
 
         // Recieve requestType
-        cout << "recieving Request Type "
-             << endl;
 
         char requestType[30];
         memset(requestType, 0, sizeof(requestType));
         ssize_t requestType_size = recv(clientSocket, requestType, sizeof(requestType), 0);
+
         
-        cout << requestType << endl;
-        size_t hyphenPos = std::string(requestType).find('-');
+        size_t hyphenPos = string(requestType).find('-');
         string request;
         string requestId;
-        if (hyphenPos == std::string::npos)
+        if (hyphenPos == string::npos)
         {
             request = requestType;
         }
         else
         {
             request = "status";
-            requestId = std::string(requestType).substr(hyphenPos + 1);
+            requestId = string(requestType).substr(hyphenPos + 1);
             cout << requestId << endl;
-        
         }
-
-        cout << request << endl;
-
-        cout << "Request Type  recieved" << endl;
 
         if (requestType_size <= 0)
         {
-            // cout << "entering Here" << endl;
+        
             close(clientSocket);
             continue;
         }
-        
 
         // action according to request type
         if (strcmp(request.c_str(), "new") == 0)
         {
+            cout<<"New Request Come"<<endl;
             send(clientSocket, "new type request recieved", 25, 0);
             handleNewRequest(clientSocket);
         }
 
         else if (request == "status")
         {
-            cout << "after comparing" << endl;
+            cout<<"Status Request Come"<<endl;
             handleStatusRequest(clientSocket, requestId);
         }
         else
@@ -455,7 +440,7 @@ int main(int argc, char *argv[])
             cerr << "Invalid Request";
             close(clientSocket);
         }
-        // cout << request << endl;
+        
     }
 
     close(serverSocket);
