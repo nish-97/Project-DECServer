@@ -188,5 +188,5 @@ make
 ```
 
 
-##GitHub Link: https://github.com/VedantK11/Project_DECS_SERVER
+##GitHub Link: https://github.com/nish-97/Project-DECServer
 
