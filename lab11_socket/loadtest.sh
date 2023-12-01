@@ -28,6 +28,7 @@ calculate_response_time() {
 # Array to store process IDs of background clients
 client_pids=()
 
+
 # Array to store response times and throughput
 response_times=()
 throughputs=()
@@ -74,7 +75,7 @@ else
 fi
 averageCPU=$(echo "100 - $averageIdle" | bc)
 
-kill -9 $vmstat_pid
+# kill -9 $vmstat_pid > /dev/NULL
 
 # Calculate average response time
 for ((i = 1; i <= $numClients; i++)); do
