@@ -52,7 +52,7 @@ for ((i = 1; i <= $numClients; i++)); do
 done
 
 # Wait for vmstat to finish and collect data
-wait $vmstat_pid
+# wait $vmstat_pid
 
 # Parse vmstat output and calculate CPU utilization
 vmstat_file="$outputDir/vmstat.log"
@@ -66,7 +66,6 @@ while read -r line; do
 	fi
     fi
 done < "$vmstat_file"
-
 let lines=lines-1
 if [[ $lines -eq 0 ]]; then
     averageIdle=$(($totalIdle ))
@@ -74,6 +73,8 @@ else
     averageIdle=$(($totalIdle / lines))
 fi
 averageCPU=$(echo "100 - $averageIdle" | bc)
+
+kill -9 $vmstat_pid
 
 # Calculate average response time
 for ((i = 1; i <= $numClients; i++)); do

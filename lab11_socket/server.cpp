@@ -20,6 +20,10 @@
 using namespace std;
 namespace fs = filesystem;
 
+//Global Variables 
+ssize_t FILE_SIZE_LIMIT=0;
+int MAX_THREADS=0;
+
 // Map to store the status of each request ID
 map<string, string> idStatusMap;
 
@@ -179,7 +183,7 @@ void handleNewRequest(int clientSocket)
     const int bufferSize = 1024;
     char buffer[bufferSize];
     size_t remainingBytes = fileSize;
-
+    ssize_t totalBytesRead =0;
     while (remainingBytes > 0)
     {
         int bytesReceived = recv(clientSocket, buffer, min(static_cast<size_t>(bufferSize), remainingBytes), 0);
@@ -191,18 +195,34 @@ void handleNewRequest(int clientSocket)
         }
 
         outputFile.write(buffer, bytesReceived);
+        totalBytesRead+=bytesReceived;
         remainingBytes -= bytesReceived;
     }
-
-    send(clientSocket, "code Recieved", 13, 0);
-
-    cout << "code recieved" << endl;
 
     if (fileSize < 0)
     {
         // Handle receive error
         cerr << "Error receiving data" << endl;
     }
+    
+    if (totalBytesRead > FILE_SIZE_LIMIT)
+    {
+        send(clientSocket, "ID Recieved is not generated because file size is too big",57, 0);
+        cout << "Error : File size is too big" << endl;
+        string removeCommand = "rm -rf \"" + requestID + "\"";
+        int rc = system(removeCommand.c_str());
+        close(clientSocket);
+        return ;
+    }
+    
+
+    else{
+    send(clientSocket, "code Recieved", 13, 0);
+
+    cout << "code recieved" << endl;
+    
+
+
 
     if (outputFile.is_open())
     {
@@ -241,6 +261,7 @@ void handleNewRequest(int clientSocket)
     pthread_mutex_unlock(&lockQueue);
 
     close(clientSocket);
+    }
 }
 
 // Function to handle status requests from clients
@@ -305,7 +326,7 @@ void crashControl()
                 cout << fs::exists(responseFile) << endl;
                 cout << fs::exists(recieveFileDone) << endl;
                 string removeCommand = "rm -rf \"" + directoryName + "\"";
-                int rc =  system(removeCommand.c_str());
+                int rc = system(removeCommand.c_str());
             }
         }
     }
@@ -332,15 +353,60 @@ void *workerThread(void *arg)
     return NULL;
 }
 
+
+// Function to read the configuration file
+bool Config(const string &configFile)
+{
+    std::ifstream file(configFile);
+    if (!file.is_open())
+    {
+        cerr << "Error: Unable to open config file." << endl;
+        return false;
+    }
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+        istringstream iss(line);
+        string key, value;
+        if (getline(iss, key, ':') && getline(iss, value))
+        {
+
+            if (key == "FILE_SIZE_LIMIT")
+            {
+                FILE_SIZE_LIMIT = stoi(value);
+            }
+            else if (key=="MAX_THREADS")
+            {
+                MAX_THREADS=stoi(value);
+            }
+            
+        }
+    }
+
+    file.close();
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
-    if (argc != 2)
+    if (argc != 4)
     {
-        cerr << "Usage: " << argv[0] << " <port>" << endl;
+        cerr << "Usage: " << argv[0] << " <port> <thread_pool_size>  <config_file> " << endl;
         return 1;
     }
 
     int port = atoi(argv[1]);
+    int thread_pool = atoi(argv[2]);
+    Config(argv[3]);
+
+
+    //check thread pool size
+    thread_pool=MAX_THREADS>thread_pool?thread_pool:MAX_THREADS;
+    cout<<"thread pool size is : " <<thread_pool <<endl;
+    cout<<"Max Threads are "<< MAX_THREADS<<endl;
+    cout<<"Max Size of File Accepted is "<<FILE_SIZE_LIMIT<<endl;
+    
 
     // Create a socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -374,7 +440,7 @@ int main(int argc, char *argv[])
     }
 
     // Create worker threads to process tasks
-    pthread_t threads[16];
+    pthread_t threads[thread_pool];
 
     for (int i = 0; i < 16; ++i)
     {
@@ -412,7 +478,7 @@ int main(int argc, char *argv[])
         {
             request = "status";
             requestId = string(requestType).substr(hyphenPos + 1);
-
+            cout << requestId << endl;
         }
 
         if (requestType_size <= 0)

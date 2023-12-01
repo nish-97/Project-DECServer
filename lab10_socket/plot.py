@@ -14,7 +14,7 @@ polling_interval = int(sys.argv[3])
 
 
 # Initialize lists to store results
-num_clients_list = [10,20,40]
+num_clients_list = [5,10,15,20,25,30,35,40,45,50]
 avg_response_time_list = []
 throughput_list = []
 cpu_utilization_list = []
