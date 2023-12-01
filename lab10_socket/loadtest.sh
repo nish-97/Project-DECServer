@@ -74,7 +74,7 @@ else
 fi
 averageCPU=$(echo "100 - $averageIdle" | bc)
 
-kill -9 $vmstat_pid
+# kill -9 $vmstat_pid > /dev/null
 
 # Calculate average response time
 for ((i = 1; i <= $numClients; i++)); do
